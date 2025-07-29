@@ -1,0 +1,55 @@
+<!-- 📌 Include this where you want the settings icon to appear -->
+<div style="position: absolute; top: 1rem; right: 1rem;">
+    <button id="settingsBtn">⚙️</button>
+</div>
+
+<!-- 🔒 Account Settings Modal (Reusable) -->
+<div id="accountModal" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+">
+    <div style="
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        width: 300px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        position: relative;
+    ">
+        <button id="closeModal" style="position: absolute; top: 10px; right: 10px">&times;</button>
+        <h3>Account Settings</h3>
+        <form id="updateForm" method="POST" action="/update_account">
+            <input type="hidden" name="user_id" value="{{ session['user_id'] }}">
+
+            <label>New Username:</label>
+            <input type="text" name="new_username" placeholder="Leave blank to keep" class="form-input"><br>
+
+            <label>Old Password:</label>
+            <input type="password" name="old_password" required class="form-input"><br>
+
+            <label>New Password:</label>
+            <input type="password" name="new_password" placeholder="Leave blank to keep" class="form-input"><br><br>
+
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Show/hide modal logic
+const modal = document.getElementById('accountModal');
+const btn = document.getElementById('settingsBtn');
+const close = document.getElementById('closeModal');
+
+btn.onclick = () => modal.style.display = 'flex';
+close.onclick = () => modal.style.display = 'none';
+window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; }
+</script>

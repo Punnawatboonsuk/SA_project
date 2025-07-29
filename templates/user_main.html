@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; background-color: #f2f2f2; }
+        h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 1rem; }
+        th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+        th { background-color: #444; color: white; cursor: pointer; }
+        tr:hover { background-color: #f9f9f9; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .filters { background: white; padding: 1rem; border: 1px solid #ccc; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+        .filters label { display: block; font-weight: bold; }
+        .filters select, .filters input { padding: 0.3rem; min-width: 150px; }
+        .filters button { padding: 0.5rem 1rem; margin-left: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Welcome, {{ username }}! Your Tickets</h2>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <form method="get" class="filters">
+        <div>
+            <label for="status">Status</label>
+            <select name="status" id="status">
+                <option value="">All</option>
+                <option value="Open" {% if filters.status == 'Open' %}selected{% endif %}>Open</option>
+                <option value="Assigned" {% if filters.status == 'Assigned' %}selected{% endif %}>Assigned</option>
+                <option value="Resolved" {% if filters.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                <option value="Reject" {% if filters.status == 'Reject' %}selected{% endif %}>Reject</option>
+                <option value="Closed" {% if filters.status == 'Closed' %}selected{% endif %}>Closed</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="urgency">Urgency</label>
+            <select name="urgency" id="urgency">
+                <option value="">All</option>
+                <option value="Low" {% if filters.urgency == 'Low' %}selected{% endif %}>Low</option>
+                <option value="Moderate" {% if filters.urgency == 'Moderate' %}selected{% endif %}>Moderate</option>
+                <option value="High" {% if filters.urgency == 'High' %}selected{% endif %}>High</option>
+                <option value="Critical" {% if filters.urgency == 'Critical' %}selected{% endif %}>Critical</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="type">Type</label>
+            <select name="type" id="type">
+                <option value="">All</option>
+                {% for type in types %}
+                <option value="{{ type }}" {% if filters.type == type %}selected{% endif %}>{{ type }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label for="search">Search</label>
+            <input type="text" name="search" id="search" value="{{ filters.search or '' }}" placeholder="Reporter, Assigner, Title">
+        </div>
+
+        <div>
+            <label for="start_date">Start Date</label>
+            <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}">
+        </div>
+
+        <div>
+            <label for="end_date">End Date</label>
+            <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}">
+        </div>
+
+        <div>
+            <button type="submit">Apply Filters</button>
+            <a href="/user/dashboard"><button type="button">Reset Filters</button></a>
+        </div>
+    </form>
+
+    {% if tickets %}
+    <table>
+        <thead>
+            <tr>
+                <th><a href="?{{ request.query_string|safe }}&sort=ticket_id">ID</a></th>
+                <th><a href="?{{ request.query_string|safe }}&sort=title">Title</a></th>
+                <th><a href="?{{ request.query_string|safe }}&sort=reporter_username">Reporter</a></th>
+                <th><a href="?{{ request.query_string|safe }}&sort=assigner_username">Assigner</a></th>
+                <th><a href="?{{ request.query_string|safe }}&sort=status">Status</a></th>
+                <th><a href="?{{ request.query_string|safe }}&sort=urgency">Urgency</a></th>
+                <th><a href="?{{ request.query_string|safe }}&sort=type_name">Type</a></th>
+                <th><a href="?{{ request.query_string|safe }}&sort=create_date">Created</a></th>
+                <th><a href="?{{ request.query_string|safe }}&sort=last_update">Last Updated</a></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr onclick="window.location='{{ url_for('user.view_ticket', ticket_id=ticket.ticket_id) }}'" style="cursor: pointer;">
+                <td>{{ ticket.ticket_id }}</td>
+                <td>{{ ticket.title }}</td>
+                <td>{{ ticket.reporter_username }}</td>
+                <td>{{ ticket.assigner_username or 'Not assigned' }}</td>
+                <td>{{ ticket.status }}</td>
+                <td>{{ ticket.urgency }}</td>
+                <td>{{ ticket.type_name }}</td>
+                <td>{{ ticket.create_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ ticket.last_update.strftime('%Y-%m-%d') if ticket.last_update else "—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>No tickets found.</p>
+    {% endif %}
+</body>
+</html>
+
+
+
+
+
+<!-- 📌 Include this where you want the settings icon to appear -->
+<div style="position: absolute; top: 1rem; right: 1rem;">
+    <button id="settingsBtn">⚙️</button>
+</div>
+
+<!-- 🔒 Account Settings Modal (Reusable) -->
+<div id="accountModal" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+">
+    <div style="
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        width: 300px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        position: relative;
+    ">
+        <button id="closeModal" style="position: absolute; top: 10px; right: 10px">&times;</button>
+        <h3>Account Settings</h3>
+        <form id="updateForm" method="POST" action="/update_account">
+            <input type="hidden" name="user_id" value="{{ session['user_id'] }}">
+
+            <label>New Username:</label>
+            <input type="text" name="new_username" placeholder="Leave blank to keep" class="form-input"><br>
+
+            <label>Old Password:</label>
+            <input type="password" name="old_password" required class="form-input"><br>
+
+            <label>New Password:</label>
+            <input type="password" name="new_password" placeholder="Leave blank to keep" class="form-input"><br><br>
+
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Show/hide modal logic
+const modal = document.getElementById('accountModal');
+const btn = document.getElementById('settingsBtn');
+const close = document.getElementById('closeModal');
+
+btn.onclick = () => modal.style.display = 'flex';
+close.onclick = () => modal.style.display = 'none';
+window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; }
+</script>

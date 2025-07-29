@@ -45,16 +45,15 @@
             text-decoration: underline;
         }
 
-        .description-box {
+        textarea {
             width: 100%;
             max-width: 800px;
-            min-height: 150px;
+            height: 150px;
             padding: 10px;
             font-size: 1rem;
             border: 1px solid #ccc;
             border-radius: 4px;
-            background-color: #f9f9f9;
-            white-space: pre-wrap;
+            resize: vertical;
         }
 
         .button-row {
@@ -70,8 +69,9 @@
             cursor: pointer;
         }
 
-        .assign-btn { background-color: #4CAF50; color: white; }
-        .resolve-btn { background-color: #2196F3; color: white; }
+        .save-btn { background-color: #4CAF50; color: white; }
+        .close-btn { background-color: #2196F3; color: white; }
+        .reject-btn { background-color: #f44336; color: white; }
     </style>
 </head>
 <body>
@@ -91,22 +91,20 @@
     </table>
 
     <h3 style="margin-top: 30px;">Description</h3>
-    <div class="description-box">{{ ticket.description }}</div>
+    <form method="POST">
+        <textarea name="description">{{ ticket.description }}</textarea>
 
-    {% if ticket.status in ['Open', 'Assigned', 'Reject'] %}
-    <form method="POST" style="margin-top: 20px;">
         <div class="button-row">
-            {% if ticket.status == 'Open' %}
-                <button type="submit" name="action" value="assign" class="assign-btn">Assign</button>
-            {% elif ticket.status in ['Assigned', 'Reject'] %}
-                <button type="submit" name="action" value="resolve" class="resolve-btn">Resolve</button>
+            <button type="submit" name="action" value="save" class="save-btn">Save</button>
+
+            {% if ticket.status == 'Resolved' %}
+                <button type="submit" name="action" value="close" class="close-btn">Close</button>
+                <button type="submit" name="action" value="reject" class="reject-btn">Reject</button>
             {% endif %}
         </div>
     </form>
-    {% endif %}
 
-    <a class="back-link" href="{{ url_for('staff.staff_main') }}">← Back to Dashboard</a>
+    <a class="back-link" href="{{ url_for('user.user_dashboard') }}">← Back to Dashboard</a>
 
 </body>
 </html>
-

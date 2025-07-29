@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staff Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 30px; }
+        h2 { color: #333; }
+        form.filter-form {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        form input, select, button {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #eef1f4;
+        }
+        .btn {
+            padding: 6px 14px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .btn-primary { background-color: #007bff; color: white; border: none; }
+        .btn-secondary { background-color: #6c757d; color: white; border: none; }
+        th.sortable:hover {
+            background-color: #ddd;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h2>Staff Dashboard ({{ 'Assigned' if view_mode == 'assigned' else 'All Open' }} Tickets)</h2>
+
+    <form method="GET" class="filter-form">
+        <input type="hidden" name="view" value="{{ view_mode }}">
+        <input type="text" name="keyword" placeholder="Search title, desc" value="{{ request.args.get('keyword', '') }}">
+
+        <select name="ticket_type">
+            <option value="">All Types</option>
+            {% for ttype in ticket_types %}
+                <option value="{{ ttype.type_id }}" {% if request.args.get('ticket_type') == ttype.type_id %}selected{% endif %}>
+                    {{ ttype.type_name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <select name="status">
+            <option value="">All Statuses</option>
+            {% for s in ['Open', 'Assigned', 'Resolved', 'Reject', 'Closed'] %}
+                <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="date" name="date" value="{{ request.args.get('date', '') }}">
+
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <a href="{{ url_for('staff.staff_main', view=view_mode) }}" class="btn btn-secondary">Reset</a>
+        <a href="{{ url_for('staff.staff_main', view='assigned' if view_mode == 'all' else 'all') }}" class="btn btn-primary">Switch to {{ 'Assigned' if view_mode == 'all' else 'All' }}</a>
+    </form>
+
+    {% if tickets %}
+    <table>
+        <thead>
+            <tr>
+                {% set sort_order_next = 'asc' if sort_order == 'desc' else 'desc' %}
+                <th class="sortable"><a href="{{ url_for('staff.staff_main', view=view_mode, sort_by='ticket_id', sort_order=sort_order_next, **request.args.to_dict(flat=True)) }}">ID</a></th>
+                <th class="sortable"><a href="{{ url_for('staff.staff_main', view=view_mode, sort_by='title', sort_order=sort_order_next, **request.args.to_dict(flat=True)) }}">Title</a></th>
+                <th>Type</th>
+                <th>Urgency</th>
+                <th>Status</th>
+                <th>Reporter</th>
+                <th>Assigner</th>
+                <th class="sortable"><a href="{{ url_for('staff.staff_main', view=view_mode, sort_by='create_date', sort_order=sort_order_next, **request.args.to_dict(flat=True)) }}">Created</a></th>
+                <th class="sortable"><a href="{{ url_for('staff.staff_main', view=view_mode, sort_by='last_update', sort_order=sort_order_next, **request.args.to_dict(flat=True)) }}">Last Updated</a></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr onclick="window.location='{{ url_for('staff.view_ticket', ticket_id=ticket.ticket_id) }}'" style="cursor: pointer;">
+                <td>{{ ticket.ticket_id }}</td>
+                <td>{{ ticket.title }}</td>
+                <td>{{ ticket.type_name }}</td>
+                <td>{{ ticket.urgency or 'N/A' }}</td>
+                <td>{{ ticket.status }}</td>
+                <td>{{ ticket.reporter_username }}</td>
+                <td>{{ ticket.assigner_username or 'Unassigned' }}</td>
+                <td>{{ ticket.create_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ ticket.last_update.strftime('%Y-%m-%d') if ticket.last_update else "—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>No tickets found for the selected filters.</p>
+    {% endif %}
+</body>
+</html>
+
+
+
+<!-- 📌 Include this where you want the settings icon to appear -->
+<div style="position: absolute; top: 1rem; right: 1rem;">
+    <button id="settingsBtn">⚙️</button>
+</div>
+
+<!-- 🔒 Account Settings Modal (Reusable) -->
+<div id="accountModal" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+">
+    <div style="
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        width: 300px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        position: relative;
+    ">
+        <button id="closeModal" style="position: absolute; top: 10px; right: 10px">&times;</button>
+        <h3>Account Settings</h3>
+        <form id="updateForm" method="POST" action="/update_account">
+            <input type="hidden" name="user_id" value="{{ session['user_id'] }}">
+
+            <label>New Username:</label>
+            <input type="text" name="new_username" placeholder="Leave blank to keep" class="form-input"><br>
+
+            <label>Old Password:</label>
+            <input type="password" name="old_password" required class="form-input"><br>
+
+            <label>New Password:</label>
+            <input type="password" name="new_password" placeholder="Leave blank to keep" class="form-input"><br><br>
+
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Show/hide modal logic
+const modal = document.getElementById('accountModal');
+const btn = document.getElementById('settingsBtn');
+const close = document.getElementById('closeModal');
+
+btn.onclick = () => modal.style.display = 'flex';
+close.onclick = () => modal.style.display = 'none';
+window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; }
+</script>
