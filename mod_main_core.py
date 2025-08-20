@@ -21,7 +21,7 @@ mod_bp = Blueprint('mod', __name__, url_prefix='/mod')
 
 @mod_bp.route("/mod_main", methods=["GET"])
 def staff_main():
-    if "user_id" not in session or session.get("role") != "Staff":
+    if "user_id" not in session or session.get("role") != "Mod":
         return redirect("/login")
 
     user_id = session["user_id"]
@@ -88,7 +88,7 @@ def staff_main():
     urgency_levels = cursor.fetchall()
 
     return render_template(
-        "staff_main.html",
+        "mod_main.html",
         tickets=tickets,
         ticket_types=ticket_types,
         urgency_levels=urgency_levels,

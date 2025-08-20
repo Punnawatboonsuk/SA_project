@@ -21,7 +21,7 @@ mod_bp = Blueprint('mod', __name__, url_prefix='/mod')
 
 @mod_bp.route("/mod/ticket/<ticket_id>", methods=["GET", "POST"])
 def mod_view_ticket(ticket_id):
-    if session.get("role") != "Moderator":
+    if session.get("role") != "Mod":
         return "Unauthorized", 403
 
     mod_id = session.get("user_id")
@@ -78,11 +78,17 @@ def mod_view_ticket(ticket_id):
 
     # Fetch staff list with specialties
     cursor.execute("""
-        SELECT a.user_id, a.username, s.speciality_name
-        FROM Accounts a
-        JOIN StaffSpeciality s ON a.user_id = s.staff_id
-        WHERE a.role = 'Staff'
-    """)
+        SELECT 
+    a.user_id,
+    a.username,
+    GROUP_CONCAT(DISTINCT s.speciality_name ORDER BY s.speciality_name SEPARATOR ', ') AS specialties
+FROM Accounts a
+JOIN StaffSpeciality s ON a.user_id = s.staff_id
+JOIN Team t ON a.user_id = t.subor_id
+WHERE a.role = 'Staff'
+  AND t.Leader_id = %s
+GROUP BY a.user_id, a.username;
+    """,(mod_id))
     staff_list = cursor.fetchall()
 
     return render_template(
