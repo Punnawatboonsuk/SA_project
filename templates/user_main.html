@@ -1,121 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>User Dashboard</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 2rem; background-color: #f2f2f2; }
-        h2 { color: #333; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 1rem; }
-        th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
-        th { background-color: #444; color: white; cursor: pointer; }
-        tr:hover { background-color: #f9f9f9; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .filters { background: white; padding: 1rem; border: 1px solid #ccc; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
-        .filters label { display: block; font-weight: bold; }
-        .filters select, .filters input { padding: 0.3rem; min-width: 150px; }
-        .filters button { padding: 0.5rem 1rem; margin-left: 0.5rem; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h2>Welcome, {{ username }}! Your Tickets</h2>
-        <a href="/logout">Logout</a>
-    </div>
+<!-- Search and Filter Form -->
+<form method="GET" action="{{ url_for('user.user_dashboard') }}">
+    <!-- Search Bar -->
+    <input type="text" name="search" placeholder="Search tickets..." value="{{ search_query }}">
+    
+    <!-- Status Dropdown -->
+    <select name="status">
+        <option value="all">All Statuses</option>
+        {% for status in status_options %}
+        <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>{{ status }}</option>
+        {% endfor %}
+    </select>
+    
+    <!-- Urgency Dropdown -->
+    <select name="urgency">
+        <option value="all">All Urgency Levels</option>
+        {% for urgency in urgency_options %}
+        <option value="{{ urgency }}" {% if selected_urgency == urgency %}selected{% endif %}>{{ urgency }}</option>
+        {% endfor %}
+    </select>
+    
+    <!-- Type Dropdown -->
+    <select name="type_id">
+        <option value="all">All Types</option>
+        {% for type in ticket_types %}
+        <option value="{{ type.type_id }}" {% if selected_type == type.type_id %}selected{% endif %}>{{ type.type_name }}</option>
+        {% endfor %}
+    </select>
+    
+    <!-- Date Filters -->
+    <input type="date" name="start_date" value="{{ start_date }}">
+    <input type="date" name="end_date" value="{{ end_date }}">
+    
+    <!-- Apply Filters Button -->
+    <button type="submit">Apply Filters</button>
+    
+    <!-- Reset Filters Button -->
+    <a href="{{ url_for('user.reset_filters') }}">Reset Filters</a>
+</form>
 
-    <form method="get" class="filters">
-        <div>
-            <label for="status">Status</label>
-            <select name="status" id="status">
-                <option value="">All</option>
-                <option value="Open" {% if filters.status == 'Open' %}selected{% endif %}>Open</option>
-                <option value="Assigned" {% if filters.status == 'Assigned' %}selected{% endif %}>Assigned</option>
-                <option value="Resolved" {% if filters.status == 'Resolved' %}selected{% endif %}>Resolved</option>
-                <option value="Reject" {% if filters.status == 'Reject' %}selected{% endif %}>Reject</option>
-                <option value="Closed" {% if filters.status == 'Closed' %}selected{% endif %}>Closed</option>
-            </select>
-        </div>
+<!-- Tickets Table -->
+<table>
+    <thead>
+        <tr>
+            <th>Ticket ID</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Urgency</th>
+            <th>Type</th>
+            <th>Created Date</th>
+            <th>Last Update</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ticket in tickets %}
+        <tr>
+            <td>{{ ticket.ticket_id }}</td>
+            <td>{{ ticket.title }}</td>
+            <td>{{ ticket.status }}</td>
+            <td>{{ ticket.urgency }}</td>
+            <td>{{ ticket.type_name }}</td>
+            <td>{{ ticket.create_date }}</td>
+            <td>{{ ticket.last_update }}</td>
+            <td>
+                <!-- View Ticket Button -->
+                <a href="{{ url_for('user.view_ticket', ticket_id=ticket.ticket_id) }}">View</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
-        <div>
-            <label for="urgency">Urgency</label>
-            <select name="urgency" id="urgency">
-                <option value="">All</option>
-                <option value="Low" {% if filters.urgency == 'Low' %}selected{% endif %}>Low</option>
-                <option value="Moderate" {% if filters.urgency == 'Moderate' %}selected{% endif %}>Moderate</option>
-                <option value="High" {% if filters.urgency == 'High' %}selected{% endif %}>High</option>
-                <option value="Critical" {% if filters.urgency == 'Critical' %}selected{% endif %}>Critical</option>
-            </select>
-        </div>
+<!-- Create New Ticket Button -->
+<a href="{{ url_for('user.create_ticket') }}">Create New Ticket</a>
 
-        <div>
-            <label for="type">Type</label>
-            <select name="type" id="type">
-                <option value="">All</option>
-                {% for type in types %}
-                <option value="{{ type }}" {% if filters.type == type %}selected{% endif %}>{{ type }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label for="search">Search</label>
-            <input type="text" name="search" id="search" value="{{ filters.search or '' }}" placeholder="Reporter, Assigner, Title">
-        </div>
-
-        <div>
-            <label for="start_date">Start Date</label>
-            <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}">
-        </div>
-
-        <div>
-            <label for="end_date">End Date</label>
-            <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}">
-        </div>
-
-        <div>
-            <button type="submit">Apply Filters</button>
-            <a href="/user/dashboard"><button type="button">Reset Filters</button></a>
-        </div>
-    </form>
-
-    {% if tickets %}
-    <table>
-        <thead>
-            <tr>
-                <th><a href="?{{ request.query_string|safe }}&sort=ticket_id">ID</a></th>
-                <th><a href="?{{ request.query_string|safe }}&sort=title">Title</a></th>
-                <th><a href="?{{ request.query_string|safe }}&sort=reporter_username">Reporter</a></th>
-                <th><a href="?{{ request.query_string|safe }}&sort=assigner_username">Assigner</a></th>
-                <th><a href="?{{ request.query_string|safe }}&sort=status">Status</a></th>
-                <th><a href="?{{ request.query_string|safe }}&sort=urgency">Urgency</a></th>
-                <th><a href="?{{ request.query_string|safe }}&sort=type_name">Type</a></th>
-                <th><a href="?{{ request.query_string|safe }}&sort=create_date">Created</a></th>
-                <th><a href="?{{ request.query_string|safe }}&sort=last_update">Last Updated</a></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ticket in tickets %}
-            <tr onclick="window.location='{{ url_for('user.view_ticket', ticket_id=ticket.ticket_id) }}'" style="cursor: pointer;">
-                <td>{{ ticket.ticket_id }}</td>
-                <td>{{ ticket.title }}</td>
-                <td>{{ ticket.reporter_username }}</td>
-                <td>{{ ticket.assigner_username or 'Not assigned' }}</td>
-                <td>{{ ticket.status }}</td>
-                <td>{{ ticket.urgency }}</td>
-                <td>{{ ticket.type_name }}</td>
-                <td>{{ ticket.create_date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ ticket.last_update.strftime('%Y-%m-%d') if ticket.last_update else "—" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-        <p>No tickets found.</p>
-    {% endif %}
-</body>
-</html>
-
-
+<!-- Logout Button -->
+<a href="{{ url_for('logout') }}">Logout</a>
 
 
 

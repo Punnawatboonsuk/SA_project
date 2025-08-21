@@ -1,86 +1,41 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Create New Ticket</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        label { display: block; margin-top: 15px; font-weight: bold; }
-        input[type="text"], textarea, select {
-            width: 100%; max-width: 600px; padding: 10px;
-            border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;
-        }
-        textarea { height: 150px; resize: vertical; }
-        button {
-            margin-top: 20px; padding: 10px 20px;
-            background-color: #4CAF50; color: white;
-            border: none; border-radius: 4px; cursor: pointer;
-        }
-        .success-msg { margin-top: 20px; color: green; font-weight: bold; }
-        nav { margin-bottom: 30px; }
-        nav a { margin-right: 15px; text-decoration: none; color: #007bff; }
-    </style>
-    <script>
-        const urgencyOptions = {
-            default: ["Low", "Medium", "High"],
-            critical: ["High", "Critical"]
-        };
+<h1>Create New Ticket</h1>
 
-        function updateUrgency() {
-            const typeSelect = document.getElementById("type");
-            const urgencySelect = document.getElementById("urgency");
-
-            const selectedType = typeSelect.value.toLowerCase();
-            let options;
-
-            if (selectedType.includes("danger") || selectedType.includes("incident")) {
-                options = urgencyOptions.critical;
-            } else {
-                options = urgencyOptions.default;
-            }
-
-            urgencySelect.innerHTML = "";
-            for (const level of options) {
-                const option = document.createElement("option");
-                option.value = level;
-                option.textContent = level;
-                urgencySelect.appendChild(option);
-            }
-        }
-    </script>
-</head>
-<body onload="updateUrgency()">
-
-    <nav>
-        <a href="{{ url_for('user.user_dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('user.create_ticket') }}">Create Ticket</a>
-        <a href="/logout">Logout</a>
-    </nav>
-
-    <h2>Create New Ticket</h2>
-
-    {% if success %}
-        <div class="success-msg">Ticket successfully created!</div>
-    {% endif %}
-
-    <form method="POST">
-        <label for="title">Title</label>
-        <input type="text" name="title" required>
-
-        <label for="description">Description</label>
-        <textarea name="description" required></textarea>
-
-        <label for="type">Ticket Type</label>
-        <select name="type" id="type" onchange="updateUrgency()" required>
+<form method="POST">
+    <div>
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required>
+    </div>
+    
+    <div>
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" required></textarea>
+    </div>
+    
+    <div>
+        <label for="type">Type:</label>
+        <select id="type" name="type">
+            <option value="">Select a type (optional)</option>
             {% for type in ticket_types %}
-                <option value="{{ type.type_name }}">{{ type.type_name }}</option>
+            <option value="{{ type.type_name }}">{{ type.type_name }}</option>
             {% endfor %}
         </select>
+    </div>
+    
+    <div>
+        <label for="urgency">Urgency:</label>
+        <select id="urgency" name="urgency" required>
+            <option value="">Select urgency level</option>
+            {% for level in urgency_levels %}
+            <option value="{{ level.level }}">{{ level.urgency }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <button type="submit">Create Ticket</button>
+</form>
 
-        <label for="urgency">Urgency Level</label>
-        <select name="urgency" id="urgency" required></select>
+<!-- Back to Main Page Button -->
+<a href="{{ url_for('user.back_to_main') }}">Back to Main Page</a>
 
-        <button type="submit">Submit Ticket</button>
-    </form>
-
-</body>
-</html>
+<!-- Logout Button -->
+<a href="{{ url_for('logout') }}">Logout</a>
