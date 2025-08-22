@@ -21,7 +21,7 @@ def get_db_connection():
     )
 
 # User Dashboard
-@user_bp.route('/main', methods=["GET"])
+@user_bp.route('/user_main', methods=["GET"])
 def user_dashboard():
     if 'user_id' not in session or session.get('role') != 'User':
         return redirect('/login')
@@ -124,7 +124,7 @@ def reset_filters():
     return redirect(url_for('user.user_dashboard'))
 
 # View Ticket Details
-@user_bp.route('/ticket/<ticket_id>', methods=['GET', 'POST'])
+@user_bp.route('/user_ticket/<ticket_id>', methods=['GET', 'POST'])
 def view_ticket(ticket_id):
     if 'user_id' not in session:
         return redirect('/login')
