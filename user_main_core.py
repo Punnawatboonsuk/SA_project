@@ -154,34 +154,59 @@ def view_ticket(ticket_id):
         # Handle form submission
         if request.method == 'POST':
             action = request.form.get('action')
-            if action == 'save':
-                new_description = request.form.get('description')
-                cursor.execute("""
-                    UPDATE Tickets
-                    SET description = %s, last_update = %s
-                    WHERE ticket_id = %s AND reporter_id = %s
-                """, (new_description, datetime.now(), ticket_id, user_id))
-                conn.commit()
-                flash('Ticket updated successfully!', 'success')
-            elif action == 'close':
-                cursor.execute("""
-                    UPDATE Tickets
-                    SET status = 'Closed', last_update = %s
-                    WHERE ticket_id = %s AND reporter_id = %s
-                """, (datetime.now(), ticket_id, user_id))
-                conn.commit()
-                flash('Ticket closed successfully!', 'success')
-            elif action == 'reject':
-                cursor.execute("""
-                    UPDATE Tickets
-                    SET status = 'Open', last_update = %s
-                    WHERE ticket_id = %s AND reporter_id = %s
-                """, (datetime.now(), ticket_id, user_id))
-                conn.commit()
-                flash('Ticket rejected!', 'success')
-            return redirect(url_for('user.view_ticket', ticket_id=ticket_id))
+            now = datetime.now()
 
-        return render_template("user_view_ticket.html", ticket=ticket)
+            try:
+                # Start transaction
+                conn.start_transaction()
+                cursor = conn.cursor()
+
+                if action == 'save':
+                   new_description = request.form.get('description')
+
+                    # Update ticket
+                   cursor.execute("""
+                    UPDATE Tickets
+                     SET description = %s, last_update = %s
+                     WHERE ticket_id = %s AND reporter_id = %s
+                    """, (new_description, now, ticket_id, user_id))
+
+                 # Insert into transaction history
+                   cursor.execute("""
+                   INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                   VALUES (%s, %s, %s, %s, %s)
+                  """, (ticket_id, 'save', user_id, now, f'Updated description to: "{new_description}"'))
+
+                   flash('Ticket updated successfully!', 'success')
+
+                elif action == 'reject':
+            # Update ticket
+                   cursor.execute("""
+                UPDATE Tickets
+                SET status = 'Open', last_update = %s, assigner_id = NULL
+                WHERE ticket_id = %s AND reporter_id = %s
+            """, (now, ticket_id, user_id))
+
+            # Insert into transaction history
+                   cursor.execute("""
+                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'reject', user_id, now, 'Ticket rejected and reassigned'))
+
+                   flash('Ticket rejected!', 'success')
+
+        # Commit both queries
+                conn.commit()
+
+            except Exception as e:
+        # Rollback on error
+                conn.rollback()
+                flash(f'Action failed: {str(e)}', 'danger')
+
+            finally:
+             cursor.close()
+
+        return redirect(url_for('user.view_ticket', ticket_id=ticket_id))
     finally:
         cursor.close()
         conn.close()
@@ -240,6 +265,12 @@ def create_ticket():
                 INSERT INTO Tickets (ticket_id, title, description, type, urgency, reporter_id, assigner_id, status, create_date, last_update,client_message,dev_message)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (ticket_id, title, description, type_id, urgency, reporter_id, assigner_id, status, create_date, last_update,"",""))
+
+            cursor.execute("""
+                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'ticket created', reporter_id, create_date, 'ticket was created into the system'))
+
             conn.commit()
             
             flash("Ticket created successfully!", "success")

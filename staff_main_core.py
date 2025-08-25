@@ -190,8 +190,13 @@ def staff_view_ticket(ticket_id):
                 """, (client_message, dev_message, now, ticket_id, staff_id))
                 conn.commit()
                 
+                
                 if messages_changed:
                     flash("Messages updated successfully", "success")
+                    cursor.execute("""
+                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'update message', staff_id, now, 'Ticket message was updated by staff'))
                 else:
                     flash("No changes to messages", "info")
 
@@ -202,12 +207,18 @@ def staff_view_ticket(ticket_id):
                     SET status = 'Assign-working_on', last_update = %s 
                     WHERE ticket_id = %s AND assigner_id = %s AND status = 'Assign-in_queue'
                 """, (now, ticket_id, staff_id))
+                
+                
                 if cursor.rowcount > 0:
                     flash("Now working on this ticket", "success")
+                    cursor.execute("""
+                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'working', staff_id, now, 'staff is working on the ticket'))
                 else:
                     flash("Could not update status. Ticket may have been modified.", "warning")
 
-            elif action == "finish":
+            elif action == "resolve":
                 cursor.execute("""
                     UPDATE Tickets 
                     SET status = 'in_checking', last_update = %s 
@@ -215,17 +226,25 @@ def staff_view_ticket(ticket_id):
                 """, (now, ticket_id, staff_id))
                 if cursor.rowcount > 0:
                     flash("Ticket marked as finished, waiting for review", "success")
+                    cursor.execute("""
+                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'resolve', staff_id, now, 'staff resolved the ticket waitnig for user to accept'))
                 else:
                     flash("Could not update status. Ticket may have been modified.", "warning")
 
             elif action == "reassign":
                 cursor.execute("""
                     UPDATE Tickets 
-                    SET status = 'Reassigning', last_update = %s 
+                    SET status = 'Open', last_update = %s 
                     WHERE ticket_id = %s AND assigner_id = %s AND status IN ('Assign-in_queue', 'Assign-working_on')
                 """, (now, ticket_id, staff_id))
                 if cursor.rowcount > 0:
                     flash("Ticket marked for reassignment", "success")
+                    cursor.execute("""
+                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'reassign', staff_id, now, 'the ticket needs reassignation'))
                 else:
                     flash("Could not update status. Ticket may have been modified.", "warning")
                     
@@ -237,6 +256,10 @@ def staff_view_ticket(ticket_id):
                 """, (now, ticket_id, staff_id))
                 if cursor.rowcount > 0:
                     flash("Ticket status set to Pending", "success")
+                    cursor.execute("""
+                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'pending', staff_id, now, 'staff stop working on ticket temporary and gatherig more informations to work'))
                 else:
                     flash("Could not update status. Ticket may have been modified.", "warning")
                     
@@ -245,7 +268,7 @@ def staff_view_ticket(ticket_id):
 
         # Determine which buttons to show based on status
         show_work_button = (ticket["status"] == "Assign-in_queue")
-        show_finish_button = (ticket["status"] == "Assign-working_on")
+        show_resolve_button = (ticket["status"] == "Assign-working_on")
         show_reassign_button = (ticket["status"] in ["Assign-in_queue", "Assign-working_on"])
         show_pending_button = True  # Staff can always set to pending
 
@@ -253,7 +276,7 @@ def staff_view_ticket(ticket_id):
             "staff_ticket_detail.html",
             ticket=ticket,
             show_work_button=show_work_button,
-            show_finish_button=show_finish_button,
+            show_finish_button=show_resolve_button,
             show_reassign_button=show_reassign_button,
             show_pending_button=show_pending_button
         )
