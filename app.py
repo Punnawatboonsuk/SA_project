@@ -59,7 +59,7 @@ def login():
             user = cursor.fetchone()
 
             if user:
-                if user['is_banned']:
+                if user['active_status'] == 0:
                     error = "This account is banned."
                 elif bcrypt.checkpw(password, user['hashed_password'].encode('utf-8')):
                     # Re-hash password for freshness

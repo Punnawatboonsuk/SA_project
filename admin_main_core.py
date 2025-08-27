@@ -76,8 +76,8 @@ def create_account():
 
 @admin_bp.route('/history', methods=["GET"])
 def transaction_history():
-    if "user_id" not in session or session.get("role") != "Mod":
-        flash("Please log in as a moderator to access this page", "error")
+    if "user_id" not in session or session.get("role") != "Admin":
+        flash("Please log in as a admin to access this page", "error")
         return redirect("/login")
     
     cursor = conn.cursor(dictionary=True)
@@ -261,6 +261,128 @@ def view_accounts():
     except Exception as e:
         flash(f"Error retrieving accounts: {str(e)}", "error")
         return render_template("admin_accounts.html", accounts=[], error=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@admin_bp.route('/account/<user_id>', methods=['GET', 'POST'])
+def account_detail(user_id):
+    if "user_id" not in session or session.get("role") != "Admin":
+        flash("Please log in as an administrator to access this page", "error")
+        return redirect("/login")
+
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        # Get account details
+        cursor.execute(
+            "SELECT user_id, username, role, active_status, email, contact_number, hashed_password, is_banned "
+            "FROM Accounts WHERE user_id = %s",
+            (user_id,)
+        )
+        account = cursor.fetchone()
+
+        if not account:
+            flash("Account not found", "error")
+            return redirect(url_for('admin.view_accounts'))
+
+        # Get staff specialties if the account is a staff member
+        specialties = []
+        if account['role'] == 'Staff':
+            cursor.execute("""
+                SELECT tt.type_id, tt.type_name 
+                FROM StaffSpeciality ss
+                JOIN TicketType tt ON ss.type_id = tt.type_id
+                WHERE ss.staff_id = %s
+            """, (user_id,))
+            specialties = cursor.fetchall()
+
+        # Get all ticket types (for specialty selection)
+        cursor.execute("SELECT * FROM TicketType")
+        ticket_types = cursor.fetchall()
+
+        if request.method == 'POST':
+            action = request.form.get("action")
+
+            if action == "save":
+                updates = []
+                params = []
+
+                new_username = request.form.get('username')
+                new_password = request.form.get('password')
+                new_email = request.form.get('email')
+                new_contact_number = request.form.get('contact_number')
+                new_active_status = request.form.get('active_status') == 'true'
+                new_is_banned = request.form.get('is_banned') == 'true'
+                new_specialties = set(request.form.getlist('specialties'))
+
+                # Check each field individually
+                if new_username and new_username != account['username']:
+                    updates.append("username = %s")
+                    params.append(new_username)
+
+                if new_email and new_email != account.get('email'):
+                    updates.append("email = %s")
+                    params.append(new_email)
+
+                if new_contact_number and new_contact_number != account.get('contact_number'):
+                    updates.append("contact_number = %s")
+                    params.append(new_contact_number)
+
+                if new_active_status != account['active_status']:
+                    updates.append("active_status = %s")
+                    params.append(new_active_status)
+
+                if new_is_banned != account['is_banned']:
+                    updates.append("is_banned = %s")
+                    params.append(new_is_banned)
+
+                if new_password:  # only update if provided
+                    hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                    updates.append("hashed_password = %s")
+                    params.append(hashed_password)
+
+                # If there are updates, run the query
+                if updates:
+                    update_query = f"UPDATE Accounts SET {', '.join(updates)} WHERE user_id = %s"
+                    params.append(user_id)
+                    cursor.execute(update_query, tuple(params))
+
+                # Handle staff specialties (only if role is Staff)
+                if account['role'] == 'Staff':
+                    cursor.execute("SELECT type_id FROM StaffSpeciality WHERE staff_id = %s", (user_id,))
+                    current_specialties = {row['type_id'] for row in cursor.fetchall()}
+
+                    to_add = new_specialties - current_specialties
+                    to_remove = current_specialties - new_specialties
+
+                    # Remove deselected specialties
+                    for type_id in to_remove:
+                        cursor.execute(
+                            "DELETE FROM StaffSpeciality WHERE staff_id = %s AND type_id = %s",
+                            (user_id, type_id)
+                        )
+
+                    # Add newly selected specialties
+                    for type_id in to_add:
+                        cursor.execute(
+                            "INSERT INTO StaffSpeciality (staff_id, type_id) VALUES (%s, %s)",
+                            (user_id, type_id)
+                        )
+
+                conn.commit()
+                flash("Account updated successfully", "success")
+                return redirect(url_for('admin.account_detail', user_id=user_id))
+
+        return render_template(
+            "admin_account_detail.html",
+            account=account,
+            specialties=specialties,
+            ticket_types=ticket_types
+        )
+    except Exception as e:
+        flash(f"Error accessing account: {str(e)}", "error")
+        return redirect(url_for('admin.view_accounts'))
     finally:
         cursor.close()
         conn.close()
