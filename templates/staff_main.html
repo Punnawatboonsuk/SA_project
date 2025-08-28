@@ -1,118 +1,504 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Staff Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Staff Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 30px; }
-        h2 { color: #333; }
-        form.filter-form {
-            margin-bottom: 20px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #7c2d12 0%, #a16207 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
             align-items: center;
         }
-        form input, select, button {
-            padding: 5px 10px;
-            font-size: 14px;
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
         }
+
+        .btn-primary {
+            background-color: #ea580c;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-secondary {
+            background-color: #92400e;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #78350f;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+        }
+
+        .btn-outline:hover {
+            background-color: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .filters-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .filters-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .form-input, .form-select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #ea580c;
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+        }
+
+        .search-input {
+            grid-column: 1 / -1;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .table-section {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
         }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ccc;
-            text-align: left;
-        }
+
         th {
-            background-color: #f0f0f0;
+            background-color: #fef7ed;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
         }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.875rem;
         }
-        tr:hover {
-            background-color: #eef1f4;
-        }
-        .btn {
-            padding: 6px 14px;
-            font-size: 14px;
+
+        tbody tr {
             cursor: pointer;
+            transition: background-color 0.2s;
         }
-        .btn-primary { background-color: #007bff; color: white; border: none; }
-        .btn-secondary { background-color: #6c757d; color: white; border: none; }
-        th.sortable:hover {
-            background-color: #ddd;
+
+        tbody tr:hover {
+            background-color: #fef7ed;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-open { background-color: #fef3c7; color: #92400e; }
+        .status-in-progress { background-color: #fed7aa; color: #c2410c; }
+        .status-resolved { background-color: #dcfce7; color: #166534; }
+        .status-closed { background-color: #f1f5f9; color: #475569; }
+
+        .urgency-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .urgency-low { background-color: #dcfce7; color: #166534; }
+        .urgency-medium { background-color: #fed7aa; color: #c2410c; }
+        .urgency-high { background-color: #fecaca; color: #dc2626; }
+        .urgency-critical { background-color: #fee2e2; color: #991b1b; }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
             cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .settings-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #1f2937;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7280;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-actions {
+                justify-content: stretch;
+            }
+            
+            .filter-actions .btn {
+                flex: 1;
+                justify-content: center;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .header-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
-    <h2>Staff Dashboard ({{ 'Assigned' if view_mode == 'assigned' else 'All Open' }} Tickets)</h2>
+    <!-- Header with navigation -->
+    <header class="header">
+        <div class="header-content">
+            <h1>IT Staff Dashboard</h1>
+            <div class="header-actions">
+                <a href="{{ url_for('staff.manage_tickets') }}" class="btn btn-primary">Manage Tickets</a>
+                <button id="settingsBtn" class="settings-btn" title="Account Settings">⚙️</button>
+                <a href="/logout" class="btn btn-secondary">Logout</a>
+            </div>
+        </div>
+    </header>
 
-    <form method="GET" class="filter-form">
-        <input type="hidden" name="view" value="{{ view_mode }}">
-        <input type="text" name="keyword" placeholder="Search title, desc" value="{{ request.args.get('keyword', '') }}">
+    <div class="container">
+        <!-- Search and filter section -->
+        <div class="filters-section">
+            <h2 class="filters-title">Search & Filter All Tickets</h2>
+            <form method="GET" action="{{ url_for('staff.staff_dashboard') }}">
+                <div class="filters-grid">
+                    <div class="form-group search-input">
+                        <label class="form-label">Search Tickets</label>
+                        <input type="text" name="search" class="form-input" placeholder="Search by ticket ID, title, or customer..." value="{{ search_query }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="all">All Statuses</option>
+                            {% for status in status_options %}
+                            <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>{{ status }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Urgency Level</label>
+                        <select name="urgency" class="form-select">
+                            <option value="all">All Urgency Levels</option>
+                            {% for urgency in urgency_options %}
+                            <option value="{{ urgency }}" {% if selected_urgency == urgency %}selected{% endif %}>{{ urgency }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Ticket Type</label>
+                        <select name="type_id" class="form-select">
+                            <option value="all">All Types</option>
+                            {% for type in ticket_types %}
+                            <option value="{{ type.type_id }}" {% if selected_type == type.type_id|string %}selected{% endif %}>{{ type.type_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-input" value="{{ start_date }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-input" value="{{ end_date }}">
+                    </div>
+                </div>
+                
+                <div class="filter-actions">
+                    <a href="{{ url_for('staff.reset_filters') }}" class="btn btn-outline">Reset Filters</a>
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </div>
+            </form>
+        </div>
 
-        <select name="ticket_type">
-            <option value="">All Types</option>
-            {% for ttype in ticket_types %}
-                <option value="{{ ttype.type_id }}" {% if request.args.get('ticket_type') == ttype.type_id %}selected{% endif %}>
-                    {{ ttype.type_name }}
-                </option>
-            {% endfor %}
-        </select>
+        <!-- Tickets table -->
+        <div class="table-section">
+            <div class="table-header">
+                <h2 class="table-title">All Customer Tickets</h2>
+            </div>
+            
+            <div class="table-container">
+                {% if tickets %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket ID</th>
+                            <th>Title</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Urgency</th>
+                            <th>Type</th>
+                            <th>Created Date</th>
+                            <th>Last Update</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                        <tr onclick="window.location.href='{{ url_for('staff.view_ticket', ticket_id=ticket.ticket_id) }}'">
+                            <td><strong>#{{ ticket.ticket_id }}</strong></td>
+                            <td>{{ ticket.title }}</td>
+                            <td>{{ ticket.customer_name or 'Unknown' }}</td>
+                            <td>
+                                <span class="status-badge status-{{ ticket.status.lower().replace(' ', '-') }}">
+                                    {{ ticket.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="urgency-badge urgency-{{ ticket.urgency.lower() }}">
+                                    {{ ticket.urgency }}
+                                </span>
+                            </td>
+                            <td>{{ ticket.type_name }}</td>
+                            <td>{{ ticket.create_date.strftime('%Y-%m-%d %H:%M') if ticket.create_date else 'N/A' }}</td>
+                            <td>{{ ticket.last_update.strftime('%Y-%m-%d %H:%M') if ticket.last_update else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <h3>No tickets found</h3>
+                    <p>No customer tickets match your current search criteria.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
-        <select name="status">
-            <option value="">All Statuses</option>
-            {% for s in ['Open', 'Assigned', 'Resolved', 'Reject', 'Closed'] %}
-                <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-        </select>
+    <!-- Account settings modal -->
+    <div id="accountModal" class="modal">
+        <div class="modal-content">
+            <button id="closeModal" class="modal-close">&times;</button>
+            <h3 class="modal-title">Staff Account Settings</h3>
+            <form id="updateForm" method="POST" action="{{ url_for('staff.update_account') }}">
+                <input type="hidden" name="user_id" value="{{ session.get('user_id', '') }}">
 
-        <input type="date" name="date" value="{{ request.args.get('date', '') }}">
+                <div class="form-group">
+                    <label class="form-label">New Username</label>
+                    <input type="text" name="new_username" class="form-input" placeholder="Leave blank to keep current">
+                </div>
 
-        <button type="submit" class="btn btn-primary">Apply</button>
-        <a href="{{ url_for('staff.staff_main', view=view_mode) }}" class="btn btn-secondary">Reset</a>
-        <a href="{{ url_for('staff.staff_main', view='assigned' if view_mode == 'all' else 'all') }}" class="btn btn-primary">Switch to {{ 'Assigned' if view_mode == 'all' else 'All' }}</a>
-    </form>
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" name="old_password" class="form-input" required>
+                </div>
 
-    {% if tickets %}
-    <table>
-        <thead>
-            <tr>
-                {% set sort_order_next = 'asc' if sort_order == 'desc' else 'desc' %}
-                <th class="sortable"><a href="{{ url_for('staff.staff_main', view=view_mode, sort_by='ticket_id', sort_order=sort_order_next, **request.args.to_dict(flat=True)) }}">ID</a></th>
-                <th class="sortable"><a href="{{ url_for('staff.staff_main', view=view_mode, sort_by='title', sort_order=sort_order_next, **request.args.to_dict(flat=True)) }}">Title</a></th>
-                <th>Type</th>
-                <th>Urgency</th>
-                <th>Status</th>
-                <th>Reporter</th>
-                <th>Assigner</th>
-                <th class="sortable"><a href="{{ url_for('staff.staff_main', view=view_mode, sort_by='create_date', sort_order=sort_order_next, **request.args.to_dict(flat=True)) }}">Created</a></th>
-                <th class="sortable"><a href="{{ url_for('staff.staff_main', view=view_mode, sort_by='last_update', sort_order=sort_order_next, **request.args.to_dict(flat=True)) }}">Last Updated</a></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ticket in tickets %}
-            <tr onclick="window.location='{{ url_for('staff.view_ticket', ticket_id=ticket.ticket_id) }}'" style="cursor: pointer;">
-                <td>{{ ticket.ticket_id }}</td>
-                <td>{{ ticket.title }}</td>
-                <td>{{ ticket.type_name }}</td>
-                <td>{{ ticket.urgency or 'N/A' }}</td>
-                <td>{{ ticket.status }}</td>
-                <td>{{ ticket.reporter_username }}</td>
-                <td>{{ ticket.assigner_username or 'Unassigned' }}</td>
-                <td>{{ ticket.create_date.strftime('%Y-%m-%d') }}</td>
-                <td>{{ ticket.last_update.strftime('%Y-%m-%d') if ticket.last_update else "—" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-        <p>No tickets found for the selected filters.</p>
-    {% endif %}
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" name="new_password" class="form-input" placeholder="Leave blank to keep current">
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('accountModal');
+        const btn = document.getElementById('settingsBtn');
+        const close = document.getElementById('closeModal');
+
+        btn.onclick = () => modal.style.display = 'flex';
+        close.onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { 
+            if (e.target == modal) modal.style.display = 'none'; 
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
 

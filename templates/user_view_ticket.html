@@ -1,39 +1,594 @@
-<h1>Ticket Details: {{ ticket.ticket_id }}</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Ticket - IT Ticketing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<form method="POST">
-    <div>
-        <label>Title:</label>
-        <input type="text" value="{{ ticket.title }}" readonly>
-    </div>
-    
-    <div>
-        <label>Description:</label>
-        <textarea name="description">{{ ticket.description }}</textarea>
-    </div>
-    
-    <div>
-        <label>Status:</label>
-        <input type="text" value="{{ ticket.status }}" readonly>
-    </div>
-    
-    <div>
-        <label>Urgency:</label>
-        <input type="text" value="{{ ticket.urgency }}" readonly>
-    </div>
-    
-    <div>
-        <label>Type:</label>
-        <input type="text" value="{{ ticket.type_name }}" readonly>
-    </div>
-    
-    <!-- Action Buttons -->
-    <button type="submit" name="action" value="save">Save Changes</button>
-    <button type="submit" name="action" value="close">Close Ticket</button>
-    <button type="submit" name="action" value="reject">Reject Ticket</button>
-</form>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
 
-<!-- Back to Main Page Button -->
-<a href="{{ url_for('user.back_to_main') }}">Back to Main Page</a>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-<!-- Logout Button -->
-<a href="{{ url_for('logout') }}">Logout</a>
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-btn:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .ticket-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .ticket-header {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .ticket-id {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .ticket-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.status-open { background: #c6f6d5; color: #22543d; }
+        .badge.status-in-progress { background: #fed7d7; color: #742a2a; }
+        .badge.status-resolved { background: #bee3f8; color: #2a4365; }
+        .badge.status-closed { background: #e2e8f0; color: #4a5568; }
+
+        .badge.urgency-low { background: #c6f6d5; color: #22543d; }
+        .badge.urgency-medium { background: #feebc8; color: #744210; }
+        .badge.urgency-high { background: #fed7d7; color: #742a2a; }
+        .badge.urgency-critical { background: #fed7d7; color: #742a2a; }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .detail-section {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #4299e1;
+            padding-bottom: 5px;
+        }
+
+        .detail-item {
+            margin-bottom: 12px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            color: #2d3748;
+            font-size: 16px;
+        }
+
+        .description-section {
+            margin-bottom: 30px;
+        }
+
+        .description-box {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 120px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #2d3748;
+        }
+
+        .update-section {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            opacity: 0.7;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #feb2b2;
+        }
+
+        .message.hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Ticket Details</h1>
+            <a href="/user/main" class="back-btn">← Back to Dashboard</a>
+        </div>
+
+        <div class="ticket-container">
+            <div class="ticket-header">
+                <div class="ticket-id">Ticket #<span id="ticketId">12345</span></div>
+                <h2 class="ticket-title" id="ticketTitle">Unable to access company email</h2>
+                <div class="status-badges">
+                    <span class="badge status-open" id="statusBadge">Open</span>
+                    <span class="badge urgency-high" id="urgencyBadge">High Priority</span>
+                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;">Email Issue</span>
+                </div>
+            </div>
+
+            <div class="details-grid">
+                <div class="detail-section">
+                    <h3 class="section-title">Ticket Information</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">Type</div>
+                        <div class="detail-value" id="ticketType">Email Issue</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Urgency</div>
+                        <div class="detail-value" id="ticketUrgency">High</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value" id="ticketStatus">Open</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Created Date</div>
+                        <div class="detail-value" id="createdDate">2024-01-15 09:30 AM</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Last Update</div>
+                        <div class="detail-value" id="lastUpdate">2024-01-15 02:45 PM</div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3 class="section-title">IT Support Assigned</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">Name</div>
+                        <div class="detail-value" id="supportName">John Smith</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Email</div>
+                        <div class="detail-value" id="supportEmail">john.smith@company.com</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Contact Number</div>
+                        <div class="detail-value" id="supportPhone">+1 (555) 123-4567</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="description-section">
+                <h3 class="section-title">Original Description</h3>
+                <div class="description-box" id="originalDescription">
+                    I am unable to access my company email account since this morning. When I try to log in, I get an error message saying "Authentication failed". I have tried resetting my password but the issue persists. This is affecting my ability to communicate with clients and complete my work tasks.
+                </div>
+            </div>
+
+            <div class="description-section">
+                <h3 class="section-title">Client Messages</h3>
+                <div class="description-box" id="clientMessages">
+                    Update: I tried accessing email from a different browser but still getting the same error. The issue started after the system maintenance last night. Please help resolve this urgently as I have important client meetings today.
+                </div>
+            </div>
+
+            <div class="update-section">
+                <h3 class="section-title">Add Update</h3>
+                
+                <div id="messageContainer" class="message hidden"></div>
+
+                <form id="updateForm">
+                    <div class="form-group">
+                        <label for="newDescription" class="form-label">New Description/Update</label>
+                        <textarea 
+                            id="newDescription" 
+                            name="newDescription" 
+                            class="form-textarea" 
+                            placeholder="Enter your update or additional information..."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary" id="saveBtn">
+                            Save Update
+                        </button>
+                        <button type="button" class="btn btn-danger" id="rejectBtn">
+                            Reject Ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get ticket ID from URL parameters
+        
+        // Get ticket ID from backend (passed as template variable)
+        const ticketId = {{ ticket_id }};
+
+// Load ticket data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadTicketData();
+});
+
+// Load ticket data from Flask API
+async function loadTicketData() {
+    try {
+        const response = await fetch(`/user/api/tickets/${ticketId}`);
+        if (response.ok) {
+            const ticket = await response.json();
+            populateTicketData(ticket);
+        } else {
+            showMessage('Failed to load ticket data', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading ticket:', error);
+        showMessage('Error loading ticket data', 'error');
+    }
+}
+
+// Populate ticket data in the page
+function populateTicketData(ticket) {
+    document.getElementById('ticketId').textContent = ticket.id;
+    document.getElementById('ticketTitle').textContent = ticket.title;
+    document.getElementById('ticketType').textContent = ticket.type;
+    document.getElementById('ticketUrgency').textContent = ticket.urgency;
+    document.getElementById('ticketStatus').textContent = ticket.status;
+    document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
+    document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
+    
+    // Update support details with actual data from backend
+    document.getElementById('supportName').textContent = ticket.assigner_username || 'Not assigned';
+    document.getElementById('supportEmail').textContent = ticket.staff_email || 'N/A';
+    document.getElementById('supportPhone').textContent = ticket.staff_number || 'N/A';
+    
+    document.getElementById('originalDescription').textContent = ticket.description;
+    document.getElementById('clientMessages').textContent = ticket.client_messages || 'No additional messages';
+
+    updateStatusBadge(ticket.status);
+    updateUrgencyBadge(ticket.urgency);
+    document.getElementById('typeBadge').textContent = ticket.type;
+    
+    // Show/hide reject button based on status
+    const rejectBtn = document.getElementById('rejectBtn');
+    if (ticket.status === 'Resolved') {
+        rejectBtn.style.display = 'block';
+    } else {
+        rejectBtn.style.display = 'none';
+    }
+}
+
+// Update status badge styling
+function updateStatusBadge(status) {
+    const badge = document.getElementById('statusBadge');
+    badge.className = `badge status-${status.toLowerCase().replace(' ', '-')}`;
+    badge.textContent = status;
+}
+
+// Update urgency badge styling
+function updateUrgencyBadge(urgency) {
+    const badge = document.getElementById('urgencyBadge');
+    badge.className = `badge urgency-${urgency.toLowerCase()}`;
+    badge.textContent = urgency + ' Priority';
+}
+
+// Format date for display
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString();
+}
+
+// Handle form submission
+document.getElementById('updateForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const newDescription = document.getElementById('newDescription').value.trim();
+    
+    if (!newDescription) {
+        showMessage('Please enter a description', 'error');
+        return;
+    }
+
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+        const response = await fetch(`/user/api/tickets/${ticketId}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                description: newDescription
+            })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            showMessage(result.message || 'Update saved successfully!', 'success');
+            document.getElementById('newDescription').value = '';
+            // Reload ticket data to show updated information
+            setTimeout(() => {
+                loadTicketData();
+            }, 1000);
+        } else {
+            showMessage(result.message || 'Failed to save update', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving update:', error);
+        showMessage('Error saving update', 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Update';
+    }
+});
+
+// Handle reject button
+document.getElementById('rejectBtn').addEventListener('click', async function() {
+    // Check if ticket is resolved before allowing rejection
+    const response = await fetch(`/user/api/tickets/${ticketId}`);
+    const ticket = await response.json();
+    
+    if (ticket.status !== 'Resolved') {
+        showMessage('You can only reject tickets that are in "Resolved" status', 'error');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to reject this ticket? This will reopen it and remove the assigned staff.')) {
+        return;
+    }
+
+    const rejectBtn = document.getElementById('rejectBtn');
+    rejectBtn.disabled = true;
+    rejectBtn.textContent = 'Rejecting...';
+
+    try {
+        const response = await fetch(`/user/api/tickets/${ticketId}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            showMessage(result.message || 'Ticket rejected successfully!', 'success');
+            setTimeout(() => {
+                window.location.href = '/user/main';
+            }, 2000);
+        } else {
+            showMessage(result.message || 'Failed to reject ticket', 'error');
+        }
+    } catch (error) {
+        console.error('Error rejecting ticket:', error);
+        showMessage('Error rejecting ticket', 'error');
+    } finally {
+        rejectBtn.disabled = false;
+        rejectBtn.textContent = 'Reject Ticket';
+    }
+});
+
+
+// Show message function
+function showMessage(text, type) {
+    const messageContainer = document.getElementById('messageContainer');
+    messageContainer.textContent = text;
+    messageContainer.className = `message ${type}`;
+    messageContainer.classList.remove('hidden');
+    
+    setTimeout(() => {
+        messageContainer.classList.add('hidden');
+    }, 5000);
+}
+    </script>
+</body>
+</html>

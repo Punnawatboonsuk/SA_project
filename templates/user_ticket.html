@@ -1,41 +1,398 @@
-<h1>Create New Ticket</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Ticket - IT Ticketing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<form method="POST">
-    <div>
-        <label for="title">Title:</label>
-        <input type="text" id="title" name="title" required>
-    </div>
-    
-    <div>
-        <label for="description">Description:</label>
-        <textarea id="description" name="description" required></textarea>
-    </div>
-    
-    <div>
-        <label for="type">Type:</label>
-        <select id="type" name="type">
-            <option value="">Select a type (optional)</option>
-            {% for type in ticket_types %}
-            <option value="{{ type.type_name }}">{{ type.type_name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    
-    <div>
-        <label for="urgency">Urgency:</label>
-        <select id="urgency" name="urgency" required>
-            <option value="">Select urgency level</option>
-            {% for level in urgency_levels %}
-            <option value="{{ level.level }}">{{ level.urgency }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    
-    <button type="submit">Create Ticket</button>
-</form>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-<!-- Back to Main Page Button -->
-<a href="{{ url_for('user.back_to_main') }}">Back to Main Page</a>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
 
-<!-- Logout Button -->
-<a href="{{ url_for('logout') }}">Logout</a>
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .required {
+            color: #e74c3c;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-control.error {
+            border-color: #e74c3c;
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .error-message {
+            background: #fdf2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success-message {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 140px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .loading {
+            display: none;
+            margin-left: 8px;
+        }
+
+        .loading::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 20px;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Create New Ticket</h1>
+            <p>Submit your IT support request</p>
+        </div>
+
+        <div class="form-container">
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
+
+            <form id="createTicketForm">
+                <div class="form-group">
+                    <label for="title">Ticket Title <span class="required">*</span></label>
+                    <input type="text" id="title" name="title" class="form-control" 
+                           placeholder="Brief description of your issue" maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description <span class="required">*</span></label>
+                    <textarea id="description" name="description" class="form-control" 
+                              placeholder="Please provide detailed information about your issue, including steps to reproduce, error messages, and any relevant context..."
+                              maxlength="2000"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="urgency">Urgency Level <span class="required">*</span></label>
+                        <select id="urgency" name="urgency" class="form-control">
+                            <option value="">Select urgency level</option>
+                            <option value="Low">Low - Minor issue, no immediate impact</option>
+                            <option value="Medium">Medium - Moderate impact on work</option>
+                            <option value="High">High - Significant impact, urgent attention needed</option>
+                            <option value="Critical">Critical - System down, immediate action required</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="type">Ticket Type</label>
+                        <select id="type" name="type" class="form-control">
+                            <option value="">Select ticket type</option>
+                            <option value="Hardware">Hardware Issue</option>
+                            <option value="Software">Software Issue</option>
+                            <option value="Network">Network/Connectivity</option>
+                            <option value="Account">Account/Access Issue</option>
+                            <option value="Request">Service Request</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" id="submitBtn" class="btn btn-primary">
+                        Create Ticket
+                        <span id="loading" class="loading"></span>
+                    </button>
+                    <a href="/user/main" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+       document.getElementById('createTicketForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Clear previous messages
+    hideMessages();
+    
+    // Get form data
+    const formData = {
+        title: document.getElementById('title').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        urgency: document.getElementById('urgency').value,
+        type: document.getElementById('type').value || 'Other'
+    };
+    
+    // Validate required fields
+    const errors = [];
+    if (!formData.title) {
+        errors.push('Ticket title is required');
+        document.getElementById('title').classList.add('error');
+    } else {
+        document.getElementById('title').classList.remove('error');
+    }
+    
+    if (!formData.description) {
+        errors.push('Description is required');
+        document.getElementById('description').classList.add('error');
+    } else {
+        document.getElementById('description').classList.remove('error');
+    }
+    
+    if (!formData.urgency) {
+        errors.push('Urgency level is required');
+        document.getElementById('urgency').classList.add('error');
+    } else {
+        document.getElementById('urgency').classList.remove('error');
+    }
+    
+    if (errors.length > 0) {
+        showError(errors.join('<br>'));
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.getElementById('submitBtn');
+    const loading = document.getElementById('loading');
+    submitBtn.disabled = true;
+    loading.style.display = 'inline-block';
+    
+    try {
+        // Send data to Flask API
+        const response = await fetch('/user/create_ticket', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showSuccess(result.message + ' Redirecting to dashboard...');
+            // Reset form
+            document.getElementById('createTicketForm').reset();
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.href = result.redirect || '/user/main';
+            }, 2000);
+        } else {
+            showError(result.message || 'Failed to create ticket. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error creating ticket:', error);
+        showError('Network error. Please check your connection and try again.');
+    } finally {
+        // Hide loading state
+        submitBtn.disabled = false;
+        loading.style.display = 'none';
+    }
+});
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.innerHTML = message;
+            errorDiv.style.display = 'block';
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.innerHTML = message;
+            successDiv.style.display = 'block';
+            successDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+        
+        // Clear error styling when user starts typing
+        document.getElementById('title').addEventListener('input', function() {
+            this.classList.remove('error');
+            hideMessages();
+        });
+        
+        document.getElementById('description').addEventListener('input', function() {
+            this.classList.remove('error');
+            hideMessages();
+        });
+        
+        document.getElementById('urgency').addEventListener('change', function() {
+            this.classList.remove('error');
+            hideMessages();
+        });
+    </script>
+</body>
+</html>

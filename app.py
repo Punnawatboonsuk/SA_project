@@ -37,59 +37,57 @@ def index():
     return redirect('/login')
 
 # Login route (GET/POST)
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = None
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    user_id = data.get('username')  # Map frontend's 'username' to backend's 'user_id'
+    password = data.get('password').encode('utf-8')
+    
+    if not user_id or not password:
+        return jsonify({"message": "User ID and password are required."}), 400
 
-    if request.method == 'POST':
-        user_id = request.form.get('user_id')
-        password = request.form.get('password').encode('utf-8')
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("SELECT * FROM Accounts WHERE user_id = %s", (user_id,))
+        user = cursor.fetchone()
 
-        if not user_id or not password:
-            error = "User ID and password are required."
-            return render_template("login.html", error=error)
+        if user:
+            if user['active_status'] == 0:
+                return jsonify({"message": "This account is banned."}), 403
+            elif bcrypt.checkpw(password, user['hashed_password'].encode('utf-8')):
+                # Update password hash
+                new_hash = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
+                cursor.execute("UPDATE Accounts SET hashed_password = %s WHERE user_id = %s", (new_hash, user_id))
+                conn.commit()
 
-        # Get database connection
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        
-        try:
-            # Check if user_id exists
-            cursor.execute("SELECT * FROM Accounts WHERE user_id = %s", (user_id,))
-            user = cursor.fetchone()
+                # Store user info in session
+                session['user_id'] = user['user_id']
+                session['username'] = user['username']
+                session['role'] = user['role']
 
-            if user:
-                if user['active_status'] == 0:
-                    error = "This account is banned."
-                elif bcrypt.checkpw(password, user['hashed_password'].encode('utf-8')):
-                    # Re-hash password for freshness
-                    new_hash = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
-                    cursor.execute("UPDATE Accounts SET hashed_password = %s WHERE user_id = %s", (new_hash, user_id))
-                    conn.commit()
-
-                    # Store user info in session
-                    session['user_id'] = user['user_id']
-                    session['username'] = user['username']
-                    session['role'] = user['role']
-
-                    # Redirect based on role
-                    if user['role'] == "Admin":
-                        return redirect(url_for('admin.main'))  # Redirect to admin blueprint
-                    elif user['role'] == "Staff":
-                        return redirect(url_for('staff.main'))  # Redirect to staff blueprint
-                    elif user['role'] == "Mod":
-                        return redirect(url_for('mod.main'))    # Redirect to mod blueprint
-                    else:
-                        return redirect(url_for('user.main'))   # Redirect to user blueprint
-                else:
-                    error = "Incorrect password."
+                return jsonify({
+                    "message": "Login successful",
+                    "redirect": get_redirect_url(user['role'])
+                }), 200
             else:
-                error = "User not found."
-        finally:
-            cursor.close()
-            conn.close()
+                return jsonify({"message": "Incorrect password."}), 401
+        else:
+            return jsonify({"message": "User not found."}), 404
+    finally:
+        cursor.close()
+        conn.close()
 
-    return render_template("login.html", error=error)
+def get_redirect_url(role):
+    if role == "Admin":
+        return url_for('admin.main')
+    elif role == "Staff":
+        return url_for('staff.main')
+    elif role == "Mod":
+        return url_for('mod.main')
+    else:
+        return url_for('user.main')
 
 # API for dynamic dropdown (AJAX fetch)
 @app.route('/api/accounts')

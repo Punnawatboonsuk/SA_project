@@ -2,55 +2,250 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
-    <script>
-        async function fetchAccounts() {
-            const username = document.getElementById('username').value;
-            const dropdown = document.getElementById('user_id');
-            const hidden = document.getElementById('user_select');
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Ticketing System - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-            if (!username) {
-                dropdown.style.display = 'none';
-                return;
-            }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
 
-            try {
-                const response = await fetch(`/api/accounts?username=${encodeURIComponent(username)}`);
-                const data = await response.json();
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
 
-                dropdown.innerHTML = ''; // Clear previous options
-                if (data.length > 0) {
-                    dropdown.style.display = 'block';
-                    data.forEach(account => {
-                        const option = document.createElement('option');
-                        option.value = account.user_id;
-                        option.text = `${account.user_id} - ${account.username}`;
-                        dropdown.appendChild(option);
-                    });
-                } else {
-                    dropdown.style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Error fetching accounts:', error);
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: #4f46e5;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .logo-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+
+        h1 {
+            color: #1f2937;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s ease;
+            background: #f9fafb;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: #4f46e5;
+            color: white;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: #4338ca;
+        }
+
+        .login-btn:active {
+            transform: translateY(1px);
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            border: 1px solid #fecaca;
+            display: none;
+        }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .forgot-password a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
             }
         }
-    </script>
+    </style>
 </head>
 <body>
-    <h2>Login</h2>
-    <form method="POST" action="/login">
-        <label for="username">Username:</label>
-        <input type="text" name="username" id="username" oninput="fetchAccounts()" required><br>
+    <div class="login-container">
+        <div class="logo-section">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+            </div>
+            <h1>IT Ticketing System</h1>
+            <p class="subtitle">Sign in to manage support tickets</p>
+        </div>
 
-        <label for="user_id">Select Account:</label>
-        <select name="user_id" id="user_id" required style="display:none;"></select><br>
+        <div class="error-message" id="errorMessage">
+            Invalid credentials. Please try again.
+        </div>
 
-        <label for="password">Password:</label>
-        <input type="password" name="password" required><br>
+        <form id="loginForm" action="/api/login" method="POST">
+            <div class="form-group">
+                <label for="username">Username or Email</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    required 
+                    autocomplete="username"
+                    placeholder="Enter your username or email"
+                >
+            </div>
 
-        <button type="submit">Login</button>
-    </form>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required 
+                    autocomplete="current-password"
+                    placeholder="Enter your password"
+                >
+            </div>
 
-    {% if error %}<p style="color:red">{{ error }}</p>{% endif %}
+            <button type="submit" class="login-btn">
+                Sign In
+            </button>
+        </form>
+
+        <div class="forgot-password">
+            <a href="/forgot-password">Forgot your password?</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const errorMessage = document.getElementById('errorMessage');
+            const submitBtn = this.querySelector('.login-btn');
+            
+            // Show loading state
+            submitBtn.textContent = 'Signing In...';
+            submitBtn.disabled = true;
+            errorMessage.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: formData.get('username'),
+                        password: formData.get('password')
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Success - redirect to dashboard
+                    window.location.href = '/dashboard';
+                } else {
+                    // Show error message
+                    errorMessage.textContent = data.message || 'Login failed. Please try again.';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Network error. Please check your connection.';
+                errorMessage.style.display = 'block';
+            } finally {
+                // Reset button state
+                submitBtn.textContent = 'Sign In';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
 </body>
 </html>

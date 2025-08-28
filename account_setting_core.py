@@ -34,7 +34,7 @@ def update_account():
     cursor.execute("SELECT * FROM Accounts WHERE user_id = %s", (user_id,))
     user = cursor.fetchone()
 
-    if not user or not bcrypt.checkpw(current_password, user['hashed_password'].encode('utf-8')):
+    if not user or not bcrypt.checkpw(current_password, user['password_hash'].encode('utf-8')):
         return "Incorrect current password", 403
 
     # Update username
