@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderator - Ticket Management - IT Ticketing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #ed8936 0%, #c05621 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            background: #ed8936;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-btn:hover {
+            background: #c05621;
+            transform: translateY(-1px);
+        }
+
+        .ticket-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .ticket-header {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .ticket-id {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .ticket-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.status-open { background: #c6f6d5; color: #22543d; }
+        .badge.status-in-progress { background: #fed7d7; color: #742a2a; }
+        .badge.status-resolved { background: #bee3f8; color: #2a4365; }
+        .badge.status-closed { background: #e2e8f0; color: #4a5568; }
+
+        .badge.urgency-low { background: #c6f6d5; color: #22543d; }
+        .badge.urgency-medium { background: #feebc8; color: #744210; }
+        .badge.urgency-high { background: #fed7d7; color: #742a2a; }
+        .badge.urgency-critical { background: #fed7d7; color: #742a2a; }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .detail-section {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ed8936;
+            padding-bottom: 5px;
+        }
+
+        .detail-item {
+            margin-bottom: 12px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            color: #2d3748;
+            font-size: 16px;
+        }
+
+        .description-section {
+            margin-bottom: 30px;
+        }
+
+        .description-box {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 120px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #2d3748;
+        }
+
+        .update-section {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #ed8936;
+            box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #ed8936;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #c05621;
+            transform: translateY(-1px);
+        }
+
+        .mod-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .btn-mod {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-save { background: #38a169; color: white; }
+        .btn-save:hover { background: #2f855a; }
+
+        .btn-assign { background: #3182ce; color: white; }
+        .btn-assign:hover { background: #2c5282; }
+        .btn-assign:disabled { background: #a0aec0; cursor: not-allowed; }
+
+        .btn-send-upper { background: #805ad5; color: white; }
+        .btn-send-upper:hover { background: #6b46c1; }
+
+        .btn-outsource { background: #d69e2e; color: white; }
+        .btn-outsource:hover { background: #b7791f; }
+
+        .btn-resolved { background: #38a169; color: white; }
+        .btn-resolved:hover { background: #2f855a; }
+
+        .btn-close { background: #718096; color: white; }
+        .btn-close:hover { background: #4a5568; }
+
+        .staff-section {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .staff-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .staff-table th {
+            background: #ed8936;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .staff-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+
+        .staff-table tr {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .staff-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .staff-table tr.selected {
+            background: #bee3f8;
+            border-left: 4px solid #3182ce;
+        }
+
+        .staff-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .workload-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .workload-low { background: #c6f6d5; color: #22543d; }
+        .workload-medium { background: #feebc8; color: #744210; }
+        .workload-high { background: #fed7d7; color: #742a2a; }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            opacity: 0.7;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #feb2b2;
+        }
+
+        .message.hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons, .mod-buttons {
+                flex-direction: column;
+            }
+
+            .btn, .btn-mod {
+                width: 100%;
+            }
+
+            .staff-table {
+                font-size: 12px;
+            }
+
+            .staff-table th, .staff-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Moderator - Ticket Management</h1>
+            <a href="/mod/dashboard" class="back-btn">← Back to Mod Dashboard</a>
+        </div>
+
+        <div class="ticket-container">
+            <div class="ticket-header">
+                <div class="ticket-id">Ticket #<span id="ticketId">12345</span></div>
+                <h2 class="ticket-title" id="ticketTitle">Unable to access company email</h2>
+                <div class="status-badges">
+                    <span class="badge status-open" id="statusBadge">Open</span>
+                    <span class="badge urgency-high" id="urgencyBadge">High Priority</span>
+                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;">Email Issue</span>
+                </div>
+            </div>
+
+            <div class="details-grid">
+                <div class="detail-section">
+                    <h3 class="section-title">Ticket Information</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">Type</div>
+                        <div class="detail-value" id="ticketType">Email Issue</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Urgency</div>
+                        <div class="detail-value" id="ticketUrgency">High</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value" id="ticketStatus">Open</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Created Date</div>
+                        <div class="detail-value" id="createdDate">2024-01-15 09:30 AM</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Last Update</div>
+                        <div class="detail-value" id="lastUpdate">2024-01-15 02:45 PM</div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3 class="section-title">Customer Information</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">Name</div>
+                        <div class="detail-value" id="customerName">Jane Doe</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Email</div>
+                        <div class="detail-value" id="customerEmail">jane.doe@company.com</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Contact Number</div>
+                        <div class="detail-value" id="customerPhone">+1 (555) 987-6543</div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3 class="section-title">Current Staff Working On</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">Username</div>
+                        <div class="detail-value" id="currentStaffUsername">john_tech</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">User ID</div>
+                        <div class="detail-value" id="currentStaffId">ST001</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Email/Contact</div>
+                        <div class="detail-value" id="currentStaffContact">john.tech@company.com</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="staff-section">
+                <h3 class="section-title">Available Staff</h3>
+                <table class="staff-table" id="staffTable">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username</th>
+                            <th>Speciality</th>
+                            <th>Current Workload</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr onclick="selectStaff(this, 'ST002', 'mike_network', 'Network Administration', 'medium')">
+                            <td>ST002</td>
+                            <td>mike_network</td>
+                            <td>Network Administration</td>
+                            <td><span class="workload-badge workload-medium">Medium (3/5)</span></td>
+                        </tr>
+                        <tr onclick="selectStaff(this, 'ST003', 'sarah_security', 'Security & Access', 'low')">
+                            <td>ST003</td>
+                            <td>sarah_security</td>
+                            <td>Security & Access</td>
+                            <td><span class="workload-badge workload-low">Low (1/5)</span></td>
+                        </tr>
+                        <tr onclick="selectStaff(this, 'ST004', 'alex_email', 'Email Systems', 'high')">
+                            <td>ST004</td>
+                            <td>alex_email</td>
+                            <td>Email Systems</td>
+                            <td><span class="workload-badge workload-high">High (4/5)</span></td>
+                        </tr>
+                        <tr onclick="selectStaff(this, 'ST005', 'lisa_hardware', 'Hardware Support', 'low')">
+                            <td>ST005</td>
+                            <td>lisa_hardware</td>
+                            <td>Hardware Support</td>
+                            <td><span class="workload-badge workload-low">Low (2/5)</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="description-section">
+                <h3 class="section-title">Original Description</h3>
+                <div class="description-box" id="originalDescription">
+                    I am unable to access my company email account since this morning. When I try to log in, I get an error message saying "Authentication failed". I have tried resetting my password but the issue persists. This is affecting my ability to communicate with clients and complete my work tasks.
+                </div>
+            </div>
+
+            <div class="description-section">
+                <h3 class="section-title">Client Messages</h3>
+                <div class="description-box" id="clientMessages">
+                    Update: I tried accessing email from a different browser but still getting the same error. The issue started after the system maintenance last night. Please help resolve this urgently as I have important client meetings today.
+                </div>
+            </div>
+
+            <div class="description-section">
+                <h3 class="section-title">Developer Messages</h3>
+                <div class="description-box" id="devMessages">
+                    Checked server logs - authentication service was down during maintenance window. Restarted service and cleared cache. Monitoring for additional issues.
+                </div>
+            </div>
+
+            <div class="update-section">
+                <h3 class="section-title">Moderator Actions</h3>
+                <div class="mod-buttons">
+                    <button type="button" class="btn-mod btn-save" onclick="saveTicket()">Save</button>
+                    <button type="button" class="btn-mod btn-assign" id="assignBtn" onclick="assignTicket()" disabled>Assign</button>
+                    <button type="button" class="btn-mod btn-send-upper" onclick="sendToUpper()">Send to Upper</button>
+                    <button type="button" class="btn-mod btn-outsource" onclick="markOutsource()">Mark as Out of Service/Outsource Dependency</button>
+                    <button type="button" class="btn-mod btn-resolved" onclick="markResolved()">Resolved</button>
+                    <button type="button" class="btn-mod btn-close" onclick="closeTicket()">Close</button>
+                </div>
+
+                <h3 class="section-title">Update Messages</h3>
+                
+                <div id="messageContainer" class="message hidden"></div>
+
+                <form id="updateForm">
+                    <div class="form-group">
+                        <label for="newClientMessage" class="form-label">Update Client Message</label>
+                        <textarea 
+                            id="newClientMessage" 
+                            name="newClientMessage" 
+                            class="form-textarea" 
+                            placeholder="Enter client message update..."
+                        ></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newDevMessage" class="form-label">Update Developer Message</label>
+                        <textarea 
+                            id="newDevMessage" 
+                            name="newDevMessage" 
+                            class="form-textarea" 
+                            placeholder="Enter developer notes and updates..."
+                        ></textarea>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedStaff = null;
+
+        const ticketId = {{ ticket_id }};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTicketData();
+        });
+
+        function selectStaff(row, staffId, username, speciality, workload) {
+            const previousSelected = document.querySelector('.staff-table tr.selected');
+            if (previousSelected) {
+                previousSelected.classList.remove('selected');
+            }
+            
+            row.classList.add('selected');
+            
+            selectedStaff = {
+                id: staffId,
+                username: username,
+                speciality: speciality,
+                workload: workload
+            };
+            
+            document.getElementById('assignBtn').disabled = false;
+            
+            showMessage(`Selected staff: ${username} (${speciality})`, 'success');
+        }
+
+        async function loadTicketData() {
+            try {
+                const response = await fetch(`/mod/api/tickets/${ticketId}`);
+                if (response.ok) {
+                    const ticket = await response.json();
+                    populateTicketData(ticket);
+                } else {
+                    showMessage('Failed to load ticket data', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading ticket:', error);
+                showMessage('Error loading ticket data', 'error');
+            }
+        }
+
+        function populateTicketData(ticket) {
+            document.getElementById('ticketId').textContent = ticket.id;
+            document.getElementById('ticketTitle').textContent = ticket.title;
+            document.getElementById('ticketType').textContent = ticket.type;
+            document.getElementById('ticketUrgency').textContent = ticket.urgency;
+            document.getElementById('ticketStatus').textContent = ticket.status;
+            document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
+            document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
+            document.getElementById('customerName').textContent = ticket.customer_name || 'Unknown Customer';
+            document.getElementById('customerEmail').textContent = ticket.customer_email || 'N/A';
+            document.getElementById('customerPhone').textContent = ticket.customer_phone || 'N/A';
+            document.getElementById('originalDescription').textContent = ticket.description;
+            document.getElementById('clientMessages').textContent = ticket.client_messages || 'No client messages';
+            document.getElementById('devMessages').textContent = ticket.dev_messages || 'No developer messages';
+
+            document.getElementById('currentStaffUsername').textContent = ticket.current_staff_username || 'Unassigned';
+            document.getElementById('currentStaffId').textContent = ticket.current_staff_id || 'N/A';
+            document.getElementById('currentStaffContact').textContent = ticket.current_staff_contact || 'N/A';
+
+            updateStatusBadge(ticket.status);
+            updateUrgencyBadge(ticket.urgency);
+            document.getElementById('typeBadge').textContent = ticket.type;
+        }
+
+        function updateStatusBadge(status) {
+            const badge = document.getElementById('statusBadge');
+            badge.className = `badge status-${status.toLowerCase().replace(' ', '-')}`;
+            badge.textContent = status;
+        }
+
+        function updateUrgencyBadge(urgency) {
+            const badge = document.getElementById('urgencyBadge');
+            badge.className = `badge urgency-${urgency.toLowerCase()}`;
+            badge.textContent = urgency + ' Priority';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        async function saveTicket() {
+            const newClientMessage = document.getElementById('newClientMessage').value.trim();
+            const newDevMessage = document.getElementById('newDevMessage').value.trim();
+            
+            if (!newClientMessage && !newDevMessage) {
+                showMessage('Please enter at least one message update', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/mod/api/tickets/${ticketId}/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        client_message: newClientMessage,
+                        dev_message: newDevMessage
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Ticket saved successfully!', 'success');
+                    document.getElementById('newClientMessage').value = '';
+                    document.getElementById('newDevMessage').value = '';
+                    setTimeout(() => loadTicketData(), 1000);
+                } else {
+                    showMessage(result.message || 'Failed to save ticket', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving ticket:', error);
+                showMessage('Error saving ticket', 'error');
+            }
+        }
+
+        async function assignTicket() {
+            if (!selectedStaff) {
+                showMessage('Please select a staff member first', 'error');
+                return;
+            }
+
+            if (!confirm(`Assign this ticket to ${selectedStaff.username}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/mod/api/tickets/${ticketId}/assign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ staff_id: selectedStaff.id })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`Ticket assigned to ${selectedStaff.username} successfully!`, 'success');
+                    loadTicketData();
+                } else {
+                    showMessage(result.message || 'Failed to assign ticket', 'error');
+                }
+            } catch (error) {
+                console.error('Error assigning ticket:', error);
+                showMessage('Error assigning ticket', 'error');
+            }
+        }
+
+        async function sendToUpper() {
+            if (!confirm('Send this ticket to upper management?')) return;
+            await updateTicketStatus('Escalated', 'Ticket sent to upper management');
+        }
+
+        async function markOutsource() {
+            if (!confirm('Mark this ticket as out of service/outsource dependency?')) return;
+            await updateTicketStatus('Outsourced', 'Ticket marked as outsource dependency');
+        }
+
+        async function markResolved() {
+            if (!confirm('Mark this ticket as resolved?')) return;
+            await updateTicketStatus('Resolved', 'Ticket marked as resolved');
+        }
+
+        async function closeTicket() {
+            if (!confirm('Close this ticket?')) return;
+            await updateTicketStatus('Closed', 'Ticket closed');
+        }
+
+        async function updateTicketStatus(status, message) {
+            try {
+                const response = await fetch(`/mod/api/tickets/${ticketId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: status })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(message, 'success');
+                    loadTicketData();
+                } else {
+                    showMessage(result.message || 'Failed to update status', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                showMessage('Error updating status', 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.textContent = text;
+            messageContainer.className = `message ${type}`;
+            messageContainer.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageContainer.classList.add('hidden');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -256,13 +256,15 @@
                     <div class="form-group">
                         <label for="type">Ticket Type</label>
                         <select id="type" name="type" class="form-control">
-                            <option value="">Select ticket type</option>
-                            <option value="Hardware">Hardware Issue</option>
-                            <option value="Software">Software Issue</option>
-                            <option value="Network">Network/Connectivity</option>
-                            <option value="Account">Account/Access Issue</option>
-                            <option value="Request">Service Request</option>
-                            <option value="Other">Other</option>
+                            <option value="">Select ticket type (default: Other)</option>
+                            <option value="Software">Software</option>
+                            <option value="Hardware">Hardware</option>
+                            <option value="Network/Connectivity">Network/Connectivity</option>
+                            <option value="Account/Access">Account/Access</option>
+                            <option value="Security">Security</option>
+                            <option value="File/Storage">File/Storage</option>
+                            <option value="Service Request">Service Request</option>
+                            <option value="Other" selected>Other</option>
                         </select>
                     </div>
                 </div>
@@ -290,7 +292,7 @@
         title: document.getElementById('title').value.trim(),
         description: document.getElementById('description').value.trim(),
         urgency: document.getElementById('urgency').value,
-        type: document.getElementById('type').value || 'Other'
+        type: document.getElementById('type').value || 'Other' // Ensure type is always sent
     };
     
     // Validate required fields

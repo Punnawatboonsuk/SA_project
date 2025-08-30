@@ -26,7 +26,12 @@ def get_db_connection():
 def user_dashboard():
     if 'user_id' not in session or session.get('role') != 'User':
         return redirect('/login')
-
+    ticket_types = ["Software", "Hardware", "Network/Connectivity", "Account/Access", 
+                   "Security", "File/Storage", "Service Request", "Other"]
+    
+    urgency_options = ["Low", "Medium", "High", "Critical"]
+    
+    status_options = ['Open','Assigned-in_queue','Assigned-working_on','pending','Reassigning','out_of_service/outsource_dependency','to_upper_level','Resolved','Closed']
     user_id = session['user_id']
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -54,11 +59,8 @@ def user_dashboard():
             SELECT 
                 t.ticket_id, t.title, t.description, t.status, 
                 t.create_date, t.last_update, 
-                tt.type_name,
-                u.urgency
+                t.type,t.urgency
             FROM Tickets t
-            JOIN TicketTypes tt ON t.type = tt.type_id
-            JOIN Urgencylevel u ON t.urgency = u.level
             WHERE t.reporter_id = %s
         """
         params = [user_id]
@@ -68,7 +70,7 @@ def user_dashboard():
             params.append(status)
 
         if urgency and urgency != "all":
-            query += " AND u.urgency = %s"
+            query += " AND t.urgency = %s"
             params.append(urgency)
 
         if type_id and type_id != "all":
@@ -93,17 +95,12 @@ def user_dashboard():
         cursor.execute(query, tuple(params))
         tickets = cursor.fetchall()
 
-        # Fetch all ticket types for dropdown
-        cursor.execute("SELECT type_id, type_name FROM TicketTypes")
-        ticket_types = cursor.fetchall()
         
-        # Get status options
-        cursor.execute("SELECT DISTINCT status FROM Tickets")
-        status_options = [row['status'] for row in cursor.fetchall()]
         
-        # Get urgency options
-        cursor.execute("SELECT DISTINCT urgency FROM Urgencylevel")
-        urgency_options = [row['urgency'] for row in cursor.fetchall()]
+        
+       
+        
+        
 
         return render_template(
             "user_main.html",
@@ -143,14 +140,12 @@ def api_get_ticket(ticket_id):
     try:
         # Fix the SQL query to include staff contact information
         cursor.execute("""
-            SELECT t.*, tt.type_name, u.urgency,
+            SELECT t.*, t.type, t.urgency,
                    ra.username AS reporter_username,
                    aa.username AS assigner_username,
                    aa.email AS staff_email,
                    aa.contact_number AS staff_number
             FROM Tickets t
-            JOIN TicketTypes tt ON t.type = tt.type_id
-            JOIN Urgencylevel u ON t.urgency = u.level
             JOIN Accounts ra ON t.reporter_id = ra.user_id
             LEFT JOIN Accounts aa ON t.assigner_id = aa.user_id
             WHERE t.ticket_id = %s AND t.reporter_id = %s
@@ -214,7 +209,7 @@ def api_update_ticket(ticket_id):
         cursor.execute("""
             INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'save', user_id, now, f'Updated description to: "{new_description}"'))
+        """, (ticket_id, 'update description', user_id, now, f'Updated description to: "{new_description}"'))
 
         conn.commit()
         
@@ -252,7 +247,7 @@ def api_reject_ticket(ticket_id):
         cursor.execute("""
             INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'reject', user_id, now, 'Ticket rejected and reassigned'))
+        """, (ticket_id, 'reject', user_id, now, 'Ticket rejected and reopen'))
 
         conn.commit()
         
@@ -284,12 +279,10 @@ def view_ticket(ticket_id):
     try:
         # Fetch ticket with full join info
         cursor.execute("""
-            SELECT t.*, tt.type_name, u.urgency,
+            SELECT t.*, t.type, t.urgency,
                    ra.username AS reporter_username,
                    aa.username AS assigner_username
             FROM Tickets t
-            JOIN TicketTypes tt ON t.type = tt.type_id
-            JOIN Urgencylevel u ON t.urgency = u.level
             JOIN Accounts ra ON t.reporter_id = ra.user_id
             LEFT JOIN Accounts aa ON t.assigner_id = aa.user_id
             WHERE t.ticket_id = %s AND t.reporter_id = %s
@@ -323,7 +316,7 @@ def view_ticket(ticket_id):
                     cursor.execute("""
                         INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
                         VALUES (%s, %s, %s, %s, %s)
-                    """, (ticket_id, 'save', user_id, now, f'Updated description to: "{new_description}"'))
+                    """, (ticket_id, 'update description', user_id, now, f'Updated description to: "{new_description}"'))
 
                     flash('Ticket updated successfully!', 'success')
 
@@ -339,7 +332,7 @@ def view_ticket(ticket_id):
                     cursor.execute("""
                         INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
                         VALUES (%s, %s, %s, %s, %s)
-                    """, (ticket_id, 'reject', user_id, now, 'Ticket rejected and reassigned'))
+                    """, (ticket_id, 'reject', user_id, now, 'Ticket rejected and reopen'))
 
                     flash('Ticket rejected!', 'success')
 
@@ -370,37 +363,36 @@ def create_ticket():
             return jsonify({"message": "Unauthorized"}), 401
         return redirect("/login")
 
+    # Define static ticket types and urgency levels
+    ticket_types = ["Software", "Hardware", "Network/Connectivity", "Account/Access", 
+                   "Security", "File/Storage", "Service Request", "Other"]
+    
+    urgency_levels = ["Low", "Medium", "High", "Critical"]
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
     try:
-        # Fetch dynamic dropdowns
-        cursor.execute("SELECT type_id, type_name FROM TicketTypes")
-        ticket_types = cursor.fetchall()
-        
-        cursor.execute("SELECT level, urgency FROM Urgencylevel")
-        urgency_levels = cursor.fetchall()
-
         # Handle AJAX request (JSON)
         if request.method == "POST" and request.is_json:
             data = request.get_json()
             title = data.get("title")
             description = data.get("description")
-            ticket_type_name = data.get("type")
+            ticket_type = data.get("type", "Other")  # Default to "Other"
             urgency = data.get("urgency")
             reporter_id = session["user_id"]
 
             # Validate required fields
             if not title or not description or not urgency:
-                return jsonify({"message": "Title and description are required."}), 400
+                return jsonify({"message": "Title, description, and urgency are required."}), 400
 
-            # Get type_id from type_name
-            type_id = 0  # Default type
-            if ticket_type_name:
-                cursor.execute("SELECT type_id FROM TicketTypes WHERE type_name = %s", (ticket_type_name,))
-                type_row = cursor.fetchone()
-                if type_row:
-                    type_id = type_row['type_id']
+            # Validate ticket type
+            if ticket_type not in ticket_types:
+                ticket_type = "Other"
+                
+            # Validate urgency level
+            if urgency not in urgency_levels:
+                return jsonify({"message": "Invalid urgency level."}), 400
 
             # Generate unique ticket_id
             while True:
@@ -414,10 +406,14 @@ def create_ticket():
             assigner_id = None
             status = "Open"
 
+            # Insert ticket directly with type name and urgency level
             cursor.execute("""
-                INSERT INTO Tickets (ticket_id, title, description, type, urgency, reporter_id, assigner_id, status, create_date, last_update, client_message, dev_message)
+                INSERT INTO Tickets (ticket_id, title, description, type, urgency, 
+                                   reporter_id, assigner_id, status, create_date, last_update, 
+                                   client_message, dev_message)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (ticket_id, title, description, type_id, urgency, reporter_id, assigner_id, status, create_date, last_update, "", ""))
+            """, (ticket_id, title, description, ticket_type, urgency, reporter_id, 
+                 assigner_id, status, create_date, last_update, "", ""))
 
             cursor.execute("""
                 INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
@@ -436,24 +432,27 @@ def create_ticket():
         elif request.method == "POST":
             title = request.form.get("title")
             description = request.form.get("description")
-            ticket_type = request.form.get("type")
+            ticket_type = request.form.get("type", "Other")
             urgency = request.form.get("urgency")
             reporter_id = session["user_id"]
 
             # Validate required fields
             if not title or not description or not urgency:
-                flash("Title and description are required.", "error")
+                flash("Title, description, and urgency are required.", "error")
                 return render_template("create_ticket.html", 
                                      ticket_types=ticket_types,
                                      urgency_levels=urgency_levels)
 
-            # Get type_id
-            type_id = 0  # Default type
-            if ticket_type:
-                cursor.execute("SELECT type_id FROM TicketTypes WHERE type_name = %s", (ticket_type,))
-                type_row = cursor.fetchone()
-                if type_row:
-                    type_id = type_row['type_id']
+            # Validate ticket type
+            if ticket_type not in ticket_types:
+                ticket_type = "Other"
+                
+            # Validate urgency level
+            if urgency not in urgency_levels:
+                flash("Invalid urgency level.", "error")
+                return render_template("create_ticket.html", 
+                                     ticket_types=ticket_types,
+                                     urgency_levels=urgency_levels)
 
             # Generate unique ticket_id
             while True:
@@ -467,10 +466,14 @@ def create_ticket():
             assigner_id = None
             status = "Open"
 
+            # Insert ticket directly with type name and urgency level
             cursor.execute("""
-                INSERT INTO Tickets (ticket_id, title, description, type, urgency, reporter_id, assigner_id, status, create_date, last_update, client_message, dev_message)
+                INSERT INTO Tickets (ticket_id, title, description, type, urgency, 
+                                   reporter_id, assigner_id, status, create_date, last_update, 
+                                   client_message, dev_message)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (ticket_id, title, description, type_id, urgency, reporter_id, assigner_id, status, create_date, last_update, "", ""))
+            """, (ticket_id, title, description, ticket_type, urgency, reporter_id, 
+                 assigner_id, status, create_date, last_update, "", ""))
 
             cursor.execute("""
                 INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
@@ -482,7 +485,7 @@ def create_ticket():
             flash("Ticket created successfully!", "success")
             return redirect(url_for('user.user_dashboard'))
 
-        # GET request - render the form
+        # GET request - render the form with static values
         return render_template("create_ticket.html", 
                              ticket_types=ticket_types,
                              urgency_levels=urgency_levels)
@@ -497,6 +500,7 @@ def create_ticket():
     finally:
         cursor.close()
         conn.close()
+   
 @user_bp.route('/update_account', methods=['POST'])
 def update_account():
     if 'user_id' not in session:

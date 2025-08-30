@@ -23,10 +23,17 @@ def mod_main():
     if "user_id" not in session or session.get("role") != "Mod":
         flash("Please log in as a moderator to access this page", "error")
         return redirect("/login")
-
+    ticket_types = ["Software", "Hardware", "Network/Connectivity", "Account/Access", 
+                   "Security", "File/Storage", "Service Request", "Other"]
+    
+    urgency_levels = ["Low", "Medium", "High", "Critical"]
+    
+    status_options = ['Open','Assigned-in_queue','Assigned-working_on','pending','Reassigning','out_of_service/outsource_dependency','to_upper_level','Resolved','Closed']
+   
+    
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-
+    
     try:
         # Get filter values from query parameters
         status = request.args.get("status", "")
@@ -49,15 +56,13 @@ def mod_main():
         query = """
             SELECT 
                 t.ticket_id, t.title, t.description, t.status, t.create_date, t.last_update,
-                tt.type_name, ul.level_name AS urgency,
+                t.type, t.urgency,
                 ru.username AS reporter_username,
                 au.username AS assigner_username
             FROM Tickets t
-            JOIN TicketType tt ON t.type = tt.type_id
-            LEFT JOIN UrgencyLevel ul ON t.urgency = ul.level_id
             JOIN Accounts ru ON t.reporter_id = ru.user_id
             LEFT JOIN Accounts au ON t.assigner_id = au.user_id
-            WHERE 1=1
+            WHERE t.assigner_id = %s
         """
         params = []
 
@@ -66,7 +71,7 @@ def mod_main():
             params.append(status)
 
         if urgency and urgency != "all":
-            query += " AND ul.level_name = %s"
+            query += " AND t.urgency = %s"
             params.append(urgency)
 
         if type_id and type_id != "all":
@@ -91,17 +96,7 @@ def mod_main():
         cursor.execute(query, tuple(params))
         tickets = cursor.fetchall()
 
-        # Get ticket types for dropdown
-        cursor.execute("SELECT * FROM TicketType")
-        ticket_types = cursor.fetchall()
-
-        # Get urgency levels for dropdown
-        cursor.execute("SELECT * FROM UrgencyLevel")
-        urgency_levels = cursor.fetchall()
-        
-        # Get status options for dropdown
-        cursor.execute("SELECT DISTINCT status FROM Tickets")
-        status_options = [row['status'] for row in cursor.fetchall()]
+    
 
         return render_template(
             "mod_main.html",

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction History - IT Ticketing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .filter-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .filter-group input, .filter-group select {
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .date-filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .date-filter-group select {
+            min-width: 150px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th {
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e9ecef;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .transaction-id {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .ticket-id {
+            font-family: 'Courier New', monospace;
+            color: #28a745;
+        }
+
+        .action-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .action-create { background: #d4edda; color: #155724; }
+        .action-update { background: #d1ecf1; color: #0c5460; }
+        .action-assign { background: #fff3cd; color: #856404; }
+        .action-resolve { background: #d1ecf1; color: #0c5460; }
+        .action-close { background: #f8d7da; color: #721c24; }
+
+        .action-by {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .action-date {
+            font-family: 'Courier New', monospace;
+            color: #6c757d;
+        }
+
+        .detail {
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .filter-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .date-filter-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Transaction History</h1>
+            <p>View and filter all ticket transaction records</p>
+        </div>
+
+        <div class="controls">
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label for="transactionIdFilter">Transaction ID</label>
+                    <input type="text" id="transactionIdFilter" placeholder="Filter by transaction ID...">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="ticketIdFilter">Ticket ID</label>
+                    <input type="text" id="ticketIdFilter" placeholder="Filter by ticket ID...">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="actionTypeFilter">Action Type</label>
+                    <input type="text" id="actionTypeFilter" placeholder="Filter by action type...">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="actionByFilter">Action By</label>
+                    <input type="text" id="actionByFilter" placeholder="Filter by user...">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Action Date</label>
+                    <div class="date-filter-group">
+                        <select id="dateFilterType">
+                            <option value="">All dates</option>
+                            <option value="specific">Specific date</option>
+                            <option value="before">Before date</option>
+                            <option value="after">After date</option>
+                        </select>
+                        <input type="date" id="dateFilterValue" style="display: none;">
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="detailFilter">Detail</label>
+                    <input type="text" id="detailFilter" placeholder="Filter by detail...">
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="clearAllFilters()">Clear All Filters</button>
+                <a href="mod_main.html" class="btn btn-secondary">Back to Main Page</a>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table id="transactionTable">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Ticket ID</th>
+                            <th>Action Type</th>
+                            <th>Action By</th>
+                            <th>Action Date</th>
+                            <th>Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody">
+                         Sample data 
+                        <tr>
+                            <td class="transaction-id">TXN-2024-001</td>
+                            <td class="ticket-id">TKT-2024-001</td>
+                            <td><span class="action-type action-create">Create</span></td>
+                            <td class="action-by">john.doe</td>
+                            <td class="action-date">2024-01-15 09:30:00</td>
+                            <td class="detail">Ticket created for network connectivity issue</td>
+                        </tr>
+                        <tr>
+                            <td class="transaction-id">TXN-2024-002</td>
+                            <td class="ticket-id">TKT-2024-001</td>
+                            <td><span class="action-type action-assign">Assign</span></td>
+                            <td class="action-by">admin.user</td>
+                            <td class="action-date">2024-01-15 10:15:00</td>
+                            <td class="detail">Ticket assigned to network specialist team</td>
+                        </tr>
+                        <tr>
+                            <td class="transaction-id">TXN-2024-003</td>
+                            <td class="ticket-id">TKT-2024-002</td>
+                            <td><span class="action-type action-create">Create</span></td>
+                            <td class="action-by">jane.smith</td>
+                            <td class="action-date">2024-01-15 11:00:00</td>
+                            <td class="detail">Hardware replacement request submitted</td>
+                        </tr>
+                        <tr>
+                            <td class="transaction-id">TXN-2024-004</td>
+                            <td class="ticket-id">TKT-2024-001</td>
+                            <td><span class="action-type action-update">Update</span></td>
+                            <td class="action-by">tech.support</td>
+                            <td class="action-date">2024-01-15 14:30:00</td>
+                            <td class="detail">Network cable replaced, testing connectivity</td>
+                        </tr>
+                        <tr>
+                            <td class="transaction-id">TXN-2024-005</td>
+                            <td class="ticket-id">TKT-2024-001</td>
+                            <td><span class="action-type action-resolve">Resolve</span></td>
+                            <td class="action-by">tech.support</td>
+                            <td class="action-date">2024-01-15 15:45:00</td>
+                            <td class="detail">Network connectivity restored, issue resolved</td>
+                        </tr>
+                        <tr>
+                            <td class="transaction-id">TXN-2024-006</td>
+                            <td class="ticket-id">TKT-2024-002</td>
+                            <td><span class="action-type action-assign">Assign</span></td>
+                            <td class="action-by">admin.user</td>
+                            <td class="action-date">2024-01-16 08:00:00</td>
+                            <td class="detail">Assigned to hardware maintenance team</td>
+                        </tr>
+                        <tr>
+                            <td class="transaction-id">TXN-2024-007</td>
+                            <td class="ticket-id">TKT-2024-001</td>
+                            <td><span class="action-type action-close">Close</span></td>
+                            <td class="action-by">john.doe</td>
+                            <td class="action-date">2024-01-16 09:00:00</td>
+                            <td class="detail">Ticket closed after user confirmation</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store original table data
+        let originalData = [];
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Store original table data
+            const rows = document.querySelectorAll('#transactionTableBody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                originalData.push({
+                    element: row.cloneNode(true),
+                    transactionId: cells[0].textContent.trim(),
+                    ticketId: cells[1].textContent.trim(),
+                    actionType: cells[2].textContent.trim(),
+                    actionBy: cells[3].textContent.trim(),
+                    actionDate: cells[4].textContent.trim(),
+                    detail: cells[5].textContent.trim()
+                });
+            });
+
+            // Add event listeners for filters
+            document.getElementById('transactionIdFilter').addEventListener('input', applyFilters);
+            document.getElementById('ticketIdFilter').addEventListener('input', applyFilters);
+            document.getElementById('actionTypeFilter').addEventListener('input', applyFilters);
+            document.getElementById('actionByFilter').addEventListener('input', applyFilters);
+            document.getElementById('detailFilter').addEventListener('input', applyFilters);
+            document.getElementById('dateFilterType').addEventListener('change', handleDateFilterChange);
+            document.getElementById('dateFilterValue').addEventListener('change', applyFilters);
+        });
+
+        function handleDateFilterChange() {
+            const dateFilterType = document.getElementById('dateFilterType').value;
+            const dateFilterValue = document.getElementById('dateFilterValue');
+            
+            if (dateFilterType === '') {
+                dateFilterValue.style.display = 'none';
+                dateFilterValue.value = '';
+            } else {
+                dateFilterValue.style.display = 'block';
+            }
+            
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const filters = {
+                transactionId: document.getElementById('transactionIdFilter').value.toLowerCase(),
+                ticketId: document.getElementById('ticketIdFilter').value.toLowerCase(),
+                actionType: document.getElementById('actionTypeFilter').value.toLowerCase(),
+                actionBy: document.getElementById('actionByFilter').value.toLowerCase(),
+                detail: document.getElementById('detailFilter').value.toLowerCase(),
+                dateType: document.getElementById('dateFilterType').value,
+                dateValue: document.getElementById('dateFilterValue').value
+            };
+
+            const tbody = document.getElementById('transactionTableBody');
+            tbody.innerHTML = '';
+
+            let filteredCount = 0;
+
+            originalData.forEach(item => {
+                let showRow = true;
+
+                // Text filters
+                if (filters.transactionId && !item.transactionId.toLowerCase().includes(filters.transactionId)) {
+                    showRow = false;
+                }
+                if (filters.ticketId && !item.ticketId.toLowerCase().includes(filters.ticketId)) {
+                    showRow = false;
+                }
+                if (filters.actionType && !item.actionType.toLowerCase().includes(filters.actionType)) {
+                    showRow = false;
+                }
+                if (filters.actionBy && !item.actionBy.toLowerCase().includes(filters.actionBy)) {
+                    showRow = false;
+                }
+                if (filters.detail && !item.detail.toLowerCase().includes(filters.detail)) {
+                    showRow = false;
+                }
+
+                // Date filter
+                if (filters.dateType && filters.dateValue) {
+                    const itemDate = new Date(item.actionDate);
+                    const filterDate = new Date(filters.dateValue);
+                    
+                    switch (filters.dateType) {
+                        case 'specific':
+                            if (itemDate.toDateString() !== filterDate.toDateString()) {
+                                showRow = false;
+                            }
+                            break;
+                        case 'before':
+                            if (itemDate >= filterDate) {
+                                showRow = false;
+                            }
+                            break;
+                        case 'after':
+                            if (itemDate <= filterDate) {
+                                showRow = false;
+                            }
+                            break;
+                    }
+                }
+
+                if (showRow) {
+                    tbody.appendChild(item.element.cloneNode(true));
+                    filteredCount++;
+                }
+            });
+
+            // Show no results message if no rows match
+            if (filteredCount === 0) {
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.innerHTML = '<td colspan="6" class="no-results">No transactions found matching the current filters.</td>';
+                tbody.appendChild(noResultsRow);
+            }
+        }
+
+        function clearAllFilters() {
+            // Clear all filter inputs
+            document.getElementById('transactionIdFilter').value = '';
+            document.getElementById('ticketIdFilter').value = '';
+            document.getElementById('actionTypeFilter').value = '';
+            document.getElementById('actionByFilter').value = '';
+            document.getElementById('detailFilter').value = '';
+            document.getElementById('dateFilterType').value = '';
+            document.getElementById('dateFilterValue').value = '';
+            document.getElementById('dateFilterValue').style.display = 'none';
+
+            // Reset table to show all data
+            const tbody = document.getElementById('transactionTableBody');
+            tbody.innerHTML = '';
+            originalData.forEach(item => {
+                tbody.appendChild(item.element.cloneNode(true));
+            });
+        }
+    </script>
+</body>
+</html>

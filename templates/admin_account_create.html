@@ -2,54 +2,446 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Create Account</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Account - IT Ticketing System</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        form { max-width: 500px; margin: auto; }
-        label, input, select { display: block; margin-bottom: 10px; }
-        .hidden { display: none; }
-        button { margin-right: 10px; padding: 5px 10px; }
-        h2 { text-align: center; }
-    </style>
-    <script>
-        function toggleRoleFields() {
-            const role = document.getElementById("role").value;
-            const staffFields = document.getElementById("staff-fields");
-            staffFields.style.display = (role === "Staff") ? "block" : "none";
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    </script>
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .specialty-panel {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .specialty-panel.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .specialty-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .checkbox-item:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .warning-message {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 500;
+        }
+
+        .warning-message.show {
+            display: block;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 20%, 40%, 60%, 80% {
+                transform: translateX(0);
+            }
+            10%, 30%, 50%, 70%, 90% {
+                transform: translateX(-5px);
+            }
+        }
+
+        .create-button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .create-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .create-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .form-container {
+                padding: 20px;
+            }
+
+            .back-button {
+                position: static;
+                margin-bottom: 20px;
+                width: fit-content;
+            }
+
+            .checkbox-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>Create New Account</h2>
-    <form method="POST" action="/admin/create-account">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-
-        <label for="password">Pre-hashed Password:</label>
-        <input type="text" id="password" name="password" required>
-
-        <label for="role">Select Role:</label>
-        <select name="role" id="role" onchange="toggleRoleFields()">
-            <option value="User">User</option>
-            <option value="Staff">Staff</option>
-        </select>
-
-        <div id="staff-fields" class="hidden">
-            <label>Assign Specialties:</label>
-            {% for ticket in ticket_types %}
-                <input type="checkbox" name="specialties" value="{{ ticket.type_id }}"> {{ ticket.name }}<br>
-            {% endfor %}
+    <div class="container">
+        <div class="header">
+            <button class="back-button" onclick="goBackToDashboard()">← Back to Dashboard</button>
+            <h1>Create New Account</h1>
+            <p>Add a new user to the IT ticketing system</p>
         </div>
 
-        <button type="submit">Create Account</button>
-        <a href="/admin"><button type="button">Back to Admin Home</button></a>
+        <div class="form-container">
+            <div class="warning-message" id="warningMessage">
+                Please fill in all required fields and select appropriate options.
+            </div>
 
-        {% if message %}
-            <p style="color: green;">{{ message }}</p>
-        {% endif %}
-        {% if error %}
-            <p style="color: red;">{{ error }}</p>
-        {% endif %}
-    </form>
+            <form id="createAccountForm">
+                <div class="form-group">
+                    <label for="username">Username *</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="contactNumber">Contact Number *</label>
+                    <input type="tel" id="contactNumber" name="contactNumber" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Role *</label>
+                    <select id="role" name="role" required onchange="toggleSpecialtyPanel()">
+                        <option value="">Select a role</option>
+                        <option value="User">User</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Mod">Mod</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+
+                <div class="specialty-panel" id="specialtyPanel">
+                    <h3>Staff Specialties *</h3>
+                    <p style="margin-bottom: 15px; color: #6c757d;">Select at least one specialty for this staff member:</p>
+                    <div class="checkbox-grid">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="software" name="specialties" value="Software">
+                            <label for="software">Software</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="hardware" name="specialties" value="Hardware">
+                            <label for="hardware">Hardware</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="network" name="specialties" value="Network/Connectivity">
+                            <label for="network">Network/Connectivity</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="account" name="specialties" value="Account/Access">
+                            <label for="account">Account/Access</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="security" name="specialties" value="Security">
+                            <label for="security">Security</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="storage" name="specialties" value="File/Storage">
+                            <label for="storage">File/Storage</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="service" name="specialties" value="Service Request">
+                            <label for="service">Service Request</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="create-button" onclick="createAccount()">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleSpecialtyPanel() {
+            const role = document.getElementById('role').value;
+            const specialtyPanel = document.getElementById('specialtyPanel');
+            
+            if (role === 'Staff') {
+                specialtyPanel.classList.add('show');
+            } else {
+                specialtyPanel.classList.remove('show');
+                // Clear all specialty checkboxes when hiding panel
+                const checkboxes = document.querySelectorAll('input[name="specialties"]');
+                checkboxes.forEach(checkbox => checkbox.checked = false);
+            }
+        }
+
+        function validateForm() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const contactNumber = document.getElementById('contactNumber').value.trim();
+            const role = document.getElementById('role').value;
+
+            // Check required fields
+            if (!username || !password || !email || !contactNumber || !role) {
+                return { valid: false, message: 'Please fill in all required fields.' };
+            }
+
+            // If role is Staff, check if at least one specialty is selected
+            if (role === 'Staff') {
+                const specialties = document.querySelectorAll('input[name="specialties"]:checked');
+                if (specialties.length === 0) {
+                    return { valid: false, message: 'Please select at least one specialty for staff members.' };
+                }
+            }
+
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return { valid: false, message: 'Please enter a valid email address.' };
+            }
+
+            return { valid: true };
+        }
+
+        function showWarning(message) {
+            const warningElement = document.getElementById('warningMessage');
+            warningElement.textContent = message;
+            warningElement.classList.add('show');
+            
+            // Hide warning after 5 seconds
+            setTimeout(() => {
+                warningElement.classList.remove('show');
+            }, 5000);
+        }
+
+        function createAccount() {
+            const validation = validateForm();
+            
+            if (!validation.valid) {
+                showWarning(validation.message);
+                return;
+            }
+
+            // Collect form data
+            const formData = {
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                contactNumber: document.getElementById('contactNumber').value.trim(),
+                role: document.getElementById('role').value,
+                specialties: []
+            };
+
+            // Collect specialties if role is Staff
+            if (formData.role === 'Staff') {
+                const selectedSpecialties = document.querySelectorAll('input[name="specialties"]:checked');
+                formData.specialties = Array.from(selectedSpecialties).map(cb => cb.value);
+            }
+
+            // Here you would typically send the data to your Flask API
+            console.log('Creating account with data:', formData);
+            
+            // Simulate API call
+            alert('Account created successfully!\n\nUsername: ' + formData.username + '\nRole: ' + formData.role + 
+                  (formData.specialties.length > 0 ? '\nSpecialties: ' + formData.specialties.join(', ') : ''));
+            
+            // Reset form
+            document.getElementById('createAccountForm').reset();
+            document.getElementById('specialtyPanel').classList.remove('show');
+        }
+
+        function goBackToDashboard() {
+            window.location.href = 'admin_main.html';
+        }
+
+        // Add click handlers for checkbox items
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxItems = document.querySelectorAll('.checkbox-item');
+            checkboxItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = this.querySelector('input[type="checkbox"]');
+                        checkbox.checked = !checkbox.checked;
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
