@@ -24,103 +24,30 @@ def staff_main():
     if "user_id" not in session or session.get("role") != "Staff":
         flash("Please log in as staff to access this page", "error")
         return redirect("/login")
-    ticket_types = ["Software", "Hardware", "Network/Connectivity", "Account/Access", 
-                   "Security", "File/Storage", "Service Request", "Other"]
-    
-    urgency_levels = ["Low", "Medium", "High", "Critical"]
-    
-    status_options = ['Open','Assigned-in_queue','Assigned-working_on','pending','Reassigning','out_of_service/outsource_dependency','to_upper_level','Resolved','Closed']
-    user_id = session['user_id']
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
 
     user_id = session["user_id"]
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
+   
     try:
-        # Get filter values from query parameters
-        status = request.args.get("status", "")
-        urgency = request.args.get("urgency", "")
-        type_id = request.args.get("type_id", "")
-        search = request.args.get("search", "")
-        start_date = request.args.get("start_date", "")
-        end_date = request.args.get("end_date", "")
-        sort_by = request.args.get("sort_by", "last_update")
-        sort_dir = request.args.get("sort_dir", "desc")
-
-        # Validate allowed sort fields to avoid SQL injection
-        allowed_sort_fields = ["create_date", "last_update", "title", "status"]
-        if sort_by not in allowed_sort_fields:
-            sort_by = "last_update"
-        if sort_dir.lower() not in ["asc", "desc"]:
-            sort_dir = "desc"
-
-        # Build dynamic SQL with filters - only show tickets assigned to current staff
-        query = """
+        # Fetch ALL tickets for this user
+        cursor.execute("""
             SELECT 
-                t.ticket_id, t.title, t.description, t.status, t.create_date, t.last_update,
-                t.type, t.urgency,
-                ru.username AS reporter_username,
-                au.username AS assigner_username
+                t.ticket_id, t.title, t.description, t.status, 
+                t.create_date, t.last_update, 
+                t.type, t.urgency
             FROM Tickets t
-            JOIN Accounts ru ON t.reporter_id = ru.user_id
-            LEFT JOIN Accounts au ON t.assigner_id = au.user_id
             WHERE t.assigner_id = %s
-        """
-        params = [user_id]
-
-        if status and status != "all":
-            query += " AND t.status = %s"
-            params.append(status)
-
-        if urgency and urgency != "all":
-            query += " AND t.urgency = %s"
-            params.append(urgency)
-
-        if type_id and type_id != "all":
-            query += " AND t.type = %s"
-            params.append(type_id)
-
-        if search:
-            query += " AND (t.title LIKE %s OR t.description LIKE %s OR ru.username LIKE %s)"
-            like_param = f"%{search}%"
-            params.extend([like_param, like_param, like_param])
-
-        if start_date:
-            query += " AND DATE(t.create_date) >= %s"
-            params.append(start_date)
-
-        if end_date:
-            query += " AND DATE(t.create_date) <= %s"
-            params.append(end_date)
-
-        query += f" ORDER BY t.{sort_by} {sort_dir.upper()}"
-
-        cursor.execute(query, tuple(params))
+            ORDER BY t.create_date DESC
+        """, (user_id,))
         tickets = cursor.fetchall()
 
-        
-
         return render_template(
-            "staff_main.html",
+            "user_main.html",
             tickets=tickets,
-            ticket_types=ticket_types,
-            urgency_levels=urgency_levels,
-            status_options=status_options,
-            username=session.get('username'),
-            selected_status=status,
-            selected_urgency=urgency,
-            selected_type=type_id,
-            search_query=search,
-            start_date=start_date,
-            end_date=end_date,
-            sort_by=sort_by,
-            sort_dir=sort_dir
+            username=session.get('username')
         )
-    except Exception as e:
-        flash(f"Error retrieving tickets: {str(e)}", "error")
-        return render_template("staff_main.html", tickets=[], error=str(e))
     finally:
         cursor.close()
         conn.close()
@@ -143,12 +70,10 @@ def staff_view_ticket(ticket_id):
     try:
         # First, get the current ticket details to preserve existing messages
         cursor.execute("""
-            SELECT t.*, ty.type_name, ul.level_name AS urgency_name,
+            SELECT t.*,
                    a.username AS reporter_name,
                    b.username AS assigner_name
             FROM Tickets t
-            LEFT JOIN TicketType ty ON t.type = ty.type_id
-            LEFT JOIN UrgencyLevel ul ON t.urgency = ul.level_id
             LEFT JOIN Accounts a ON t.reporter_id = a.user_id
             LEFT JOIN Accounts b ON t.assigner_id = b.user_id
             WHERE t.ticket_id = %s AND t.assigner_id = %s

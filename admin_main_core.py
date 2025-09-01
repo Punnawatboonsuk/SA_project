@@ -83,26 +83,10 @@ def transaction_history():
     cursor = conn.cursor(dictionary=True)
     
     try:
-        # Get filter values from query parameters
-        transaction_id = request.args.get("transaction_id", "")
-        ticket_id = request.args.get("ticket_id", "")
-        action_type = request.args.get("action_type", "")
-        action_by = request.args.get("action_by", "")
-        start_date = request.args.get("start_date", "")
-        end_date = request.args.get("end_date", "")
-        details = request.args.get("details", "")
-        sort_by = request.args.get("sort_by", "action_date")
-        sort_dir = request.args.get("sort_dir", "desc")
-        
-        # Validate allowed sort fields to avoid SQL injection
-        allowed_sort_fields = ["transaction_id", "ticket_id", "action_type", "action_by", "action_date"]
-        if sort_by not in allowed_sort_fields:
-            sort_by = "action_date"
-        if sort_dir.lower() not in ["asc", "desc"]:
-            sort_dir = "desc"
+       
         
         # Build dynamic SQL with filters
-        query = """
+        cursor.execute("""
             SELECT 
                 th.transaction_id,
                 th.ticket_id,
@@ -113,68 +97,16 @@ def transaction_history():
                 th.details
             FROM Transaction_history th
             LEFT JOIN Accounts a ON th.action_by = a.user_id
-            WHERE 1=1
-        """
-        params = []
-        
-        if transaction_id:
-            query += " AND th.transaction_id = %s"
-            params.append(transaction_id)
-            
-        if ticket_id:
-            query += " AND th.ticket_id LIKE %s"
-            params.append(f"%{ticket_id}%")
-            
-        if action_type:
-            query += " AND th.action_type = %s"
-            params.append(action_type)
-            
-        if action_by:
-            query += " AND (th.action_by LIKE %s OR a.username LIKE %s)"
-            params.extend([f"%{action_by}%", f"%{action_by}%"])
-            
-        if start_date:
-            query += " AND DATE(th.action_date) >= %s"
-            params.append(start_date)
-            
-        if end_date:
-            query += " AND DATE(th.action_date) <= %s"
-            params.append(end_date)
-            
-        if details:
-            query += " AND th.details LIKE %s"
-            params.append(f"%{details}%")
-            
-        query += f" ORDER BY th.{sort_by} {sort_dir.upper()}"
-        
-        cursor.execute(query, tuple(params))
+        """)
         transactions = cursor.fetchall()
-        
-        # Get distinct action types for dropdown
-        cursor.execute("SELECT DISTINCT action_type FROM Transaction_history ORDER BY action_type")
-        action_types = [row['action_type'] for row in cursor.fetchall()]
-        
-        return render_template(
-            "mod_history.html",
-            transactions=transactions,
-            action_types=action_types,
-            transaction_id=transaction_id,
-            ticket_id=ticket_id,
-            action_type=action_type,
-            action_by=action_by,
-            start_date=start_date,
-            end_date=end_date,
-            details=details,
-            sort_by=sort_by,
-            sort_dir=sort_dir
-        )
+        return render_template("mod_history.html",transactions=transactions)
     except Exception as e:
         flash(f"Error retrieving transaction history: {str(e)}", "error")
-        return render_template("mod_history.html", transactions=[], error=str(e))
+        return render_template("admin_transaction_history.html", transactions=[], error=str(e))
     finally:
         cursor.close()
         conn.close()
-        
+
 @admin_bp.route("/accounts", methods=["GET"])
 def view_accounts():
     if "user_id" not in session or session.get("role") != "Admin":

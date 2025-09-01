@@ -26,95 +26,28 @@ def get_db_connection():
 def user_dashboard():
     if 'user_id' not in session or session.get('role') != 'User':
         return redirect('/login')
-    ticket_types = ["Software", "Hardware", "Network/Connectivity", "Account/Access", 
-                   "Security", "File/Storage", "Service Request", "Other"]
-    
-    urgency_options = ["Low", "Medium", "High", "Critical"]
-    
-    status_options = ['Open','Assigned-in_queue','Assigned-working_on','pending','Reassigning','out_of_service/outsource_dependency','to_upper_level','Resolved','Closed']
+
     user_id = session['user_id']
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # Get filter values from query params
-        status = request.args.get("status", "all")
-        urgency = request.args.get("urgency", "all")
-        type_id = request.args.get("type_id", "all")
-        search = request.args.get("search", "")
-        start_date = request.args.get("start_date")
-        end_date = request.args.get("end_date")
-        sort_by = request.args.get("sort_by", "create_date")
-        sort_dir = request.args.get("sort_dir", "desc")
-
-        # Validate allowed sort fields to avoid SQL injection
-        allowed_sort_fields = ["create_date", "last_update"]
-        if sort_by not in allowed_sort_fields:
-            sort_by = "create_date"
-        if sort_dir.lower() not in ["asc", "desc"]:
-            sort_dir = "desc"
-
-        # Build dynamic SQL with filters
-        query = """
+        # Fetch ALL tickets for this user
+        cursor.execute("""
             SELECT 
                 t.ticket_id, t.title, t.description, t.status, 
                 t.create_date, t.last_update, 
-                t.type,t.urgency
+                t.type, t.urgency
             FROM Tickets t
             WHERE t.reporter_id = %s
-        """
-        params = [user_id]
-
-        if status and status != "all":
-            query += " AND t.status = %s"
-            params.append(status)
-
-        if urgency and urgency != "all":
-            query += " AND t.urgency = %s"
-            params.append(urgency)
-
-        if type_id and type_id != "all":
-            query += " AND t.type = %s"
-            params.append(type_id)
-
-        if search:
-            query += " AND (t.title LIKE %s OR t.description LIKE %s)"
-            like = f"%{search}%"
-            params.extend([like, like])
-
-        if start_date:
-            query += " AND DATE(t.create_date) >= %s"
-            params.append(start_date)
-
-        if end_date:
-            query += " AND DATE(t.create_date) <= %s"
-            params.append(end_date)
-
-        query += f" ORDER BY t.{sort_by} {sort_dir.upper()}"
-
-        cursor.execute(query, tuple(params))
+            ORDER BY t.create_date DESC
+        """, (user_id,))
         tickets = cursor.fetchall()
-
-        
-        
-        
-       
-        
-        
 
         return render_template(
             "user_main.html",
             tickets=tickets,
-            username=session.get('username'),
-            ticket_types=ticket_types,
-            status_options=status_options,
-            urgency_options=urgency_options,
-            selected_status=status,
-            selected_urgency=urgency,
-            selected_type=type_id,
-            search_query=search,
-            start_date=start_date,
-            end_date=end_date
+            username=session.get('username')
         )
     finally:
         cursor.close()
@@ -128,7 +61,7 @@ def reset_filters():
 # View Ticket Details
 # View Ticket Details - API version
 # In your api_get_ticket function in user_main_core.py
-@user_bp.route('/api/tickets/<int:ticket_id>', methods=['GET'])
+@user_bp.route('/api/tickets/<ticket_id>', methods=['GET'])
 def api_get_ticket(ticket_id):
     if 'user_id' not in session:
         return jsonify({"message": "Unauthorized"}), 401
@@ -161,7 +94,7 @@ def api_get_ticket(ticket_id):
             "title": ticket["title"],
             "description": ticket["description"],
             "status": ticket["status"],
-            "type": ticket["type_name"],
+            "type": ticket["type"],
             "urgency": ticket["urgency"],
             "created_date": ticket["create_date"].isoformat() if ticket["create_date"] else None,
             "last_update": ticket["last_update"].isoformat() if ticket["last_update"] else None,
@@ -180,7 +113,7 @@ def api_get_ticket(ticket_id):
         conn.close()
 
 # Update Ticket - API version
-@user_bp.route('/api/tickets/<str:ticket_id>/update', methods=['POST'])
+@user_bp.route('/api/tickets/<ticket_id>/update', methods=['POST'])
 def api_update_ticket(ticket_id):
     if 'user_id' not in session:
         return jsonify({"message": "Unauthorized"}), 401
@@ -224,7 +157,7 @@ def api_update_ticket(ticket_id):
         conn.close()
 
 # Reject Ticket - API version
-@user_bp.route('/api/tickets/<str:ticket_id>/reject', methods=['POST'])
+@user_bp.route('/api/tickets/<ticket_id>/reject', methods=['POST'])
 def api_reject_ticket(ticket_id):
     if 'user_id' not in session:
         return jsonify({"message": "Unauthorized"}), 401
@@ -262,7 +195,7 @@ def api_reject_ticket(ticket_id):
         conn.close()
 
 # Keep the original view_ticket method for form-based submissions
-@user_bp.route('/ticket/<str:ticket_id>', methods=['GET', 'POST'])
+@user_bp.route('/ticket/<ticket_id>', methods=['GET', 'POST'])
 def view_ticket(ticket_id):
     if 'user_id' not in session:
         return redirect('/login')
