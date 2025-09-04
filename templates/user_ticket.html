@@ -214,6 +214,84 @@
                 width: 100%;
             }
         }
+
+        /* Added file upload styles */
+        .file-upload-container {
+            position: relative;
+        }
+
+        .file-upload-help {
+            margin-top: 5px;
+        }
+
+        .file-upload-help small {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .file-list {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .file-list h4 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .file-list ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e1e8ed;
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .file-remove {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .file-remove:hover {
+            background: #c0392b;
+        }
     </style>
 </head>
 <body>
@@ -269,6 +347,24 @@
                     </div>
                 </div>
 
+                <!-- Added file upload section -->
+                <div class="form-group">
+                    <label for="attachments">Attachments</label>
+                    <div class="file-upload-container">
+                        <input type="file" id="attachments" name="attachments" class="form-control" 
+                               multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar">
+                        <div class="file-upload-help">
+                            <small>Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG, GIF, ZIP, RAR (Max 10MB per file)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- File list display -->
+                    <div id="fileList" class="file-list" style="display: none;">
+                        <h4>Uploaded Files:</h4>
+                        <ul id="fileItems"></ul>
+                    </div>
+                </div>
+
                 <div class="button-group">
                     <button type="submit" id="submitBtn" class="btn btn-primary">
                         Create Ticket
@@ -281,86 +377,161 @@
     </div>
 
     <script>
-       document.getElementById('createTicketForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    // Clear previous messages
-    hideMessages();
-    
-    // Get form data
-    const formData = {
-        title: document.getElementById('title').value.trim(),
-        description: document.getElementById('description').value.trim(),
-        urgency: document.getElementById('urgency').value,
-        type: document.getElementById('type').value || 'Other' // Ensure type is always sent
-    };
-    
-    // Validate required fields
-    const errors = [];
-    if (!formData.title) {
-        errors.push('Ticket title is required');
-        document.getElementById('title').classList.add('error');
-    } else {
-        document.getElementById('title').classList.remove('error');
-    }
-    
-    if (!formData.description) {
-        errors.push('Description is required');
-        document.getElementById('description').classList.add('error');
-    } else {
-        document.getElementById('description').classList.remove('error');
-    }
-    
-    if (!formData.urgency) {
-        errors.push('Urgency level is required');
-        document.getElementById('urgency').classList.add('error');
-    } else {
-        document.getElementById('urgency').classList.remove('error');
-    }
-    
-    if (errors.length > 0) {
-        showError(errors.join('<br>'));
-        return;
-    }
-    
-    // Show loading state
-    const submitBtn = document.getElementById('submitBtn');
-    const loading = document.getElementById('loading');
-    submitBtn.disabled = true;
-    loading.style.display = 'inline-block';
-    
-    try {
-        // Send data to Flask API
-        const response = await fetch('/user/create_ticket', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
+        let selectedFiles = [];
+
+        document.getElementById('attachments').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            
+            files.forEach(file => {
+                // Check file size (10MB limit)
+                if (file.size > 10 * 1024 * 1024) {
+                    showError(`File "${file.name}" is too large. Maximum size is 10MB.`);
+                    return;
+                }
+                
+                // Check if file already exists
+                if (selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    showError(`File "${file.name}" is already selected.`);
+                    return;
+                }
+                
+                selectedFiles.push(file);
+            });
+            
+            updateFileList();
+            // Clear the input to allow selecting the same file again if removed
+            e.target.value = '';
         });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showSuccess(result.message + ' Redirecting to dashboard...');
-            // Reset form
-            document.getElementById('createTicketForm').reset();
-            // Redirect after 2 seconds
-            setTimeout(() => {
-                window.location.href = result.redirect || '/user/main';
-            }, 2000);
-        } else {
-            showError(result.message || 'Failed to create ticket. Please try again.');
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            const fileItems = document.getElementById('fileItems');
+            
+            if (selectedFiles.length === 0) {
+                fileList.style.display = 'none';
+                return;
+            }
+            
+            fileList.style.display = 'block';
+            fileItems.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.className = 'file-item';
+                li.innerHTML = `
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${formatFileSize(file.size)}</div>
+                    </div>
+                    <button type="button" class="file-remove" onclick="removeFile(${index})">Remove</button>
+                `;
+                fileItems.appendChild(li);
+            });
         }
-    } catch (error) {
-        console.error('Error creating ticket:', error);
-        showError('Network error. Please check your connection and try again.');
-    } finally {
-        // Hide loading state
-        submitBtn.disabled = false;
-        loading.style.display = 'none';
-    }
-});
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        document.getElementById('createTicketForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Clear previous messages
+            hideMessages();
+            
+            // Get form data
+            const title = document.getElementById('title').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const urgency = document.getElementById('urgency').value;
+            const type = document.getElementById('type').value || 'Other';
+            
+            // Validate required fields
+            const errors = [];
+            if (!title) {
+                errors.push('Ticket title is required');
+                document.getElementById('title').classList.add('error');
+            } else {
+                document.getElementById('title').classList.remove('error');
+            }
+            
+            if (!description) {
+                errors.push('Description is required');
+                document.getElementById('description').classList.add('error');
+            } else {
+                document.getElementById('description').classList.remove('error');
+            }
+            
+            if (!urgency) {
+                errors.push('Urgency level is required');
+                document.getElementById('urgency').classList.add('error');
+            } else {
+                document.getElementById('urgency').classList.remove('error');
+            }
+            
+            if (errors.length > 0) {
+                showError(errors.join('<br>'));
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            submitBtn.disabled = true;
+            loading.style.display = 'inline-block';
+            
+            try {
+                // Create FormData for file upload
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('description', description);
+                formData.append('urgency', urgency);
+                formData.append('type', type);
+                
+                // Add files to FormData
+                selectedFiles.forEach((file, index) => {
+                    formData.append('attachments', file);
+                });
+                
+                // Send data to Flask API
+                const response = await fetch('/user/create_ticket', {
+                    method: 'POST',
+                    body: formData // Don't set Content-Type header, let browser set it with boundary
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(result.message + ' Redirecting to dashboard...');
+                    // Reset form and files
+                    document.getElementById('createTicketForm').reset();
+                    selectedFiles = [];
+                    updateFileList();
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = result.redirect || '/user/main';
+                    }, 2000);
+                } else {
+                    showError(result.message || 'Failed to create ticket. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error creating ticket:', error);
+                showError('Network error. Please check your connection and try again.');
+            } finally {
+                // Hide loading state
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
             errorDiv.innerHTML = message;

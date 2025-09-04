@@ -5,24 +5,30 @@ from dotenv import load_dotenv
 import mariadb
 import random
 import bcrypt
-
+import psycopg2
+import psycopg2.extras
 load_dotenv()
 
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+def get_db_connection():
+    conn = psycopg2.connect(
+        host=os.getenv("SUPABASE_HOST"),
+        database="postgres",        # Supabase default DB
+        user="postgres",            # Supabase default user
+        password=os.getenv("SUPABASE_DB_PASSWORD"),  # keep password safe
+        port="5432"
+    )
+    return conn
 
 # Database connection
-conn = mariadb.connect(
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST"),
-    port=int(os.getenv("DB_PORT")),
-    database=os.getenv("DB_NAME")
-)
-cursor = conn.cursor(dictionary=True)
+
 
 def generate_unique_user_id():
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     while True:
         new_id = str(random.randint(1, 9999999999)).zfill(10)  # e.g., "0000000123"
         cursor.execute("SELECT user_id FROM Accounts WHERE user_id = %s", (new_id,))
@@ -35,6 +41,9 @@ def create_account():
         return "Unauthorized", 403
 
     message = error = None
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     if request.method == "POST":
         username = request.form["username"]
@@ -80,7 +89,8 @@ def transaction_history():
         flash("Please log in as a admin to access this page", "error")
         return redirect("/login")
     
-    cursor = conn.cursor(dictionary=True)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
     try:
        
@@ -113,7 +123,8 @@ def view_accounts():
         flash("Please log in as an administrator to access this page", "error")
         return redirect("/login")
     
-    cursor = conn.cursor(dictionary=True)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
         # Get filter values from query parameters
@@ -203,7 +214,8 @@ def account_detail(user_id):
         flash("Please log in as an administrator to access this page", "error")
         return redirect("/login")
 
-    cursor = conn.cursor(dictionary=True)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
         # Get account details

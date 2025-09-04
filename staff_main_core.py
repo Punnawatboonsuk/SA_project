@@ -3,7 +3,8 @@ import mariadb
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-
+import psycopg2
+import psycopg2.extras
 # Load environment variables
 load_dotenv()
 
@@ -11,13 +12,14 @@ staff_bp = Blueprint('staff', __name__, url_prefix='/staff')
 
 # Database connection function
 def get_db_connection():
-    return mariadb.connect(
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST"),
-        port=int(os.getenv("DB_PORT")),
-        database=os.getenv("DB_NAME")
+    conn = psycopg2.connect(
+        host=os.getenv("SUPABASE_HOST"),
+        database="postgres",        # Supabase default DB
+        user="postgres",            # Supabase default user
+        password=os.getenv("SUPABASE_DB_PASSWORD"),  # keep password safe
+        port="5432"
     )
+    return conn
 
 @staff_bp.route("/staff_main", methods=["GET"])
 def staff_main():
@@ -27,7 +29,7 @@ def staff_main():
 
     user_id = session["user_id"]
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
    
     try:
@@ -65,7 +67,7 @@ def staff_view_ticket(ticket_id):
 
     staff_id = session.get("user_id")
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
         # First, get the current ticket details to preserve existing messages

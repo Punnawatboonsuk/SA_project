@@ -167,6 +167,135 @@
             color: #2d3748;
         }
 
+        .attachments-section {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .attachments-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .attachments-table th,
+        .attachments-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .attachments-table th {
+            background: #edf2f7;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .attachments-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .download-all-btn {
+            background: #38a169;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .download-all-btn:hover {
+            background: #2f855a;
+            transform: translateY(-1px);
+        }
+
+        .file-upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            transition: border-color 0.2s ease;
+        }
+
+        .file-upload-area:hover {
+            border-color: #4299e1;
+        }
+
+        .file-upload-area.dragover {
+            border-color: #4299e1;
+            background: #ebf8ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .upload-btn:hover {
+            background: #3182ce;
+        }
+
+        .file-list {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .remove-file-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .remove-file-btn:hover {
+            background: #c53030;
+        }
+
         .update-section {
             background: #f7fafc;
             border-radius: 8px;
@@ -298,6 +427,15 @@
             .btn {
                 width: 100%;
             }
+
+            .attachments-table {
+                font-size: 14px;
+            }
+
+            .attachments-table th,
+            .attachments-table td {
+                padding: 8px;
+            }
         }
     </style>
 </head>
@@ -375,6 +513,51 @@
                 </div>
             </div>
 
+            <div class="attachments-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 class="section-title" style="margin-bottom: 0;">Attachments</h3>
+                    <button type="button" class="download-all-btn" id="downloadAllBtn">
+                        📥 Download All Files
+                    </button>
+                </div>
+                
+                <table class="attachments-table" id="attachmentsTable">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>File Type</th>
+                            <th>Upload Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attachmentsTableBody">
+                        <!-- Attachments will be loaded here from backend -->
+                    </tbody>
+                </table>
+                
+                <div id="noAttachments" style="text-align: center; color: #718096; padding: 20px;">
+                    No attachments found for this ticket.
+                </div>
+            </div>
+
+            <div class="attachments-section">
+                <h3 class="section-title">Add New Attachments</h3>
+                
+                <div class="file-upload-area" id="fileUploadArea">
+                    <p style="margin-bottom: 10px; color: #4a5568;">
+                        Drag and drop files here or click to browse
+                    </p>
+                    <input type="file" id="fileInput" class="file-input" multiple accept="*/*">
+                    <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        Choose Files
+                    </button>
+                    <p style="margin-top: 10px; font-size: 12px; color: #718096;">
+                        Maximum file size: 10MB per file
+                    </p>
+                </div>
+
+                <div class="file-list" id="newFilesList"></div>
+            </div>
+
             <div class="update-section">
                 <h3 class="section-title">Add Update</h3>
                 
@@ -411,9 +594,159 @@
         // Get ticket ID from backend (passed as template variable)
         const ticketId = {{ ticket_id }};
 
+        let newFiles = [];
+        let existingAttachments = [];
+
 // Load ticket data when page loads
 document.addEventListener('DOMContentLoaded', function() {
     loadTicketData();
+    loadAttachments();
+    setupFileUpload();
+});
+
+async function loadAttachments() {
+    try {
+        const response = await fetch(`/user/api/tickets/${ticketId}/attachments`);
+        if (response.ok) {
+            existingAttachments = await response.json();
+            displayAttachments();
+        } else {
+            console.error('Failed to load attachments');
+        }
+    } catch (error) {
+        console.error('Error loading attachments:', error);
+    }
+}
+
+function displayAttachments() {
+    const tableBody = document.getElementById('attachmentsTableBody');
+    const noAttachments = document.getElementById('noAttachments');
+    
+    if (existingAttachments.length === 0) {
+        tableBody.innerHTML = '';
+        noAttachments.style.display = 'block';
+        document.getElementById('downloadAllBtn').style.display = 'none';
+    } else {
+        noAttachments.style.display = 'none';
+        document.getElementById('downloadAllBtn').style.display = 'block';
+        
+        tableBody.innerHTML = existingAttachments.map(file => `
+            <tr>
+                <td>${file.filename}</td>
+                <td>${file.filetype}</td>
+                <td>${formatDate(file.upload_date)}</td>
+            </tr>
+        `).join('');
+    }
+}
+
+function setupFileUpload() {
+    const fileInput = document.getElementById('fileInput');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    
+    // File input change event
+    fileInput.addEventListener('change', handleFileSelect);
+    
+    // Drag and drop events
+    fileUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.add('dragover');
+    });
+    
+    fileUploadArea.addEventListener('dragleave', () => {
+        fileUploadArea.classList.remove('dragover');
+    });
+    
+    fileUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files);
+        addFilesToList(files);
+    });
+}
+
+function handleFileSelect(e) {
+    const files = Array.from(e.target.files);
+    addFilesToList(files);
+}
+
+function addFilesToList(files) {
+    files.forEach(file => {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            showMessage(`File "${file.name}" is too large. Maximum size is 10MB.`, 'error');
+            return;
+        }
+        
+        if (!newFiles.find(f => f.name === file.name && f.size === file.size)) {
+            newFiles.push(file);
+        }
+    });
+    
+    displayNewFiles();
+}
+
+function displayNewFiles() {
+    const filesList = document.getElementById('newFilesList');
+    
+    if (newFiles.length === 0) {
+        filesList.innerHTML = '';
+        return;
+    }
+    
+    filesList.innerHTML = newFiles.map((file, index) => `
+        <div class="file-item">
+            <div class="file-info">
+                <div class="file-name">${file.name}</div>
+                <div class="file-size">${formatFileSize(file.size)}</div>
+            </div>
+            <button type="button" class="remove-file-btn" onclick="removeNewFile(${index})">
+                Remove
+            </button>
+        </div>
+    `).join('');
+}
+
+function removeNewFile(index) {
+    newFiles.splice(index, 1);
+    displayNewFiles();
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+document.getElementById('downloadAllBtn').addEventListener('click', async function() {
+    if (existingAttachments.length === 0) {
+        showMessage('No files to download', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/user/api/tickets/${ticketId}/download-all`, {
+            method: 'GET'
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ticket_${ticketId}_attachments.zip`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            showMessage('Failed to download files', 'error');
+        }
+    } catch (error) {
+        console.error('Error downloading files:', error);
+        showMessage('Error downloading files', 'error');
+    }
 });
 
 // Load ticket data from Flask API
@@ -490,8 +823,8 @@ document.getElementById('updateForm').addEventListener('submit', async function(
     
     const newDescription = document.getElementById('newDescription').value.trim();
     
-    if (!newDescription) {
-        showMessage('Please enter a description', 'error');
+    if (!newDescription && newFiles.length === 0) {
+        showMessage('Please enter a description or attach files', 'error');
         return;
     }
 
@@ -500,14 +833,19 @@ document.getElementById('updateForm').addEventListener('submit', async function(
     saveBtn.textContent = 'Saving...';
 
     try {
+        const formData = new FormData();
+        if (newDescription) {
+            formData.append('description', newDescription);
+        }
+        
+        // Add new files to FormData
+        newFiles.forEach((file, index) => {
+            formData.append('files', file);
+        });
+
         const response = await fetch(`/user/api/tickets/${ticketId}/update`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                description: newDescription
-            })
+            body: formData
         });
 
         const result = await response.json();
@@ -515,9 +853,14 @@ document.getElementById('updateForm').addEventListener('submit', async function(
         if (response.ok) {
             showMessage(result.message || 'Update saved successfully!', 'success');
             document.getElementById('newDescription').value = '';
-            // Reload ticket data to show updated information
+            newFiles = [];
+            displayNewFiles();
+            document.getElementById('fileInput').value = '';
+            
+            // Reload ticket data and attachments
             setTimeout(() => {
                 loadTicketData();
+                loadAttachments();
             }, 1000);
         } else {
             showMessage(result.message || 'Failed to save update', 'error');
@@ -577,7 +920,6 @@ document.getElementById('rejectBtn').addEventListener('click', async function() 
     }
 });
 
-
 // Show message function
 function showMessage(text, type) {
     const messageContainer = document.getElementById('messageContainer');
@@ -592,3 +934,4 @@ function showMessage(text, type) {
     </script>
 </body>
 </html>
+

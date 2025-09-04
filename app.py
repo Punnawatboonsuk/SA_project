@@ -8,7 +8,8 @@ from user_main_core import user_bp
 from staff_main_core import staff_bp  # Changed variable name for consistency
 from admin_main_core import admin_bp  # You'll need to create this
 from mod_main_core import mod_bp      # You'll need to create this
-
+import psycopg2
+import psycopg2.extras
 # Load environment variables
 load_dotenv()
 
@@ -24,13 +25,14 @@ app.register_blueprint(mod_bp, url_prefix='/mod')      # Add this blueprint
 
 # Database connection function
 def get_db_connection():
-    return mariadb.connect(
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST"),
-        port=int(os.getenv("DB_PORT")),
-        database=os.getenv("DB_NAME")
+    conn = psycopg2.connect(
+        host=os.getenv("SUPABASE_HOST"),
+        database="postgres",        # Supabase default DB
+        user="postgres",            # Supabase default user
+        password=os.getenv("SUPABASE_DB_PASSWORD"),  # keep password safe
+        port="5432"
     )
+    return conn
 
 @app.route('/')
 def index():
@@ -47,7 +49,7 @@ def api_login():
         return jsonify({"message": "User ID and password are required."}), 400
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
     try:
         cursor.execute("SELECT * FROM Accounts WHERE user_id = %s", (user_id,))
@@ -97,7 +99,7 @@ def api_accounts():
         return jsonify([])
     
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
     try:
         cursor.execute("SELECT user_id, username FROM Accounts WHERE username = %s AND is_banned = 0", (username,))

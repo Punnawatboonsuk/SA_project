@@ -3,20 +3,22 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from dotenv import load_dotenv
 import mariadb
-
+import psycopg2
+import psycopg2.extras
 load_dotenv()
 
 mod_bp = Blueprint('mod', __name__, url_prefix='/mod')
 
 # Database connection function
 def get_db_connection():
-    return mariadb.connect(
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST"),
-        port=int(os.getenv("DB_PORT")),
-        database=os.getenv("DB_NAME")
+    conn = psycopg2.connect(
+        host=os.getenv("SUPABASE_HOST"),
+        database="postgres",        # Supabase default DB
+        user="postgres",            # Supabase default user
+        password=os.getenv("SUPABASE_DB_PASSWORD"),  # keep password safe
+        port="5432"
     )
+    return conn
 
 @mod_bp.route("/main", methods=["GET"])
 def mod_main():
@@ -26,7 +28,7 @@ def mod_main():
     
     
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
     try:
         # Fetch ALL tickets for this user
@@ -62,7 +64,7 @@ def mod_view_ticket(ticket_id):
 
     mod_id = session.get("user_id")
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
 
     try:
@@ -247,7 +249,7 @@ def transaction_history():
         return redirect("/login")
     
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
     try:
         cursor.execute("""
