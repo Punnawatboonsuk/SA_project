@@ -164,6 +164,11 @@ def update_ticket(ticket_id):
                         VALUES (%s, %s, %s, %s, %s)
                     """, (ticket_id, filename, mime_type, file_url, now))
 
+        cursor.execute("""
+            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_time, detail)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (ticket_id, 'ticket update', session["user_id"], now, 'user update the ticket description/attachment'))
+
         conn.commit()
         return jsonify({"message": "Update and attachments saved successfully!"}), 200
 
@@ -523,16 +528,28 @@ def download_all_attachments(ticket_id):
         if not attachments:
             return jsonify({"message": "No attachments found"}), 404
 
-        # Build ZIP in memory
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zipf:
             for att in attachments:
-                if att["filedata"]:  # inline in DB
+                if att["filedata"]:  # Inline in DB
                     zipf.writestr(att["filename"], att["filedata"])
-                elif att["file_url"]:  # stored in Supabase
-                    # For now, we just include a text file with the URL
-                    content = f"File stored in Supabase Storage:\n{att['file_url']}"
-                    zipf.writestr(att["filename"] + ".url.txt", content)
+
+                elif att["file_url"]:  # Stored in Supabase bucket
+                    try:
+                        bucket_name = "large_file_for_db"
+                        storage_path = "/".join(att["file_url"].split(bucket_name + "/")[1:])
+
+                        # Fetch file bytes from Supabase Storage
+                        res = supabase.storage.from_(bucket_name).download(storage_path)
+                        if res is not None:
+                            zipf.writestr(att["filename"], res)
+                        else:
+                            # If download fails, fallback to writing a note
+                            zipf.writestr(att["filename"] + ".url.txt",
+                                          f"File could not be retrieved, original URL:\n{att['file_url']}")
+                    except Exception as e:
+                        zipf.writestr(att["filename"] + ".error.txt",
+                                      f"Error fetching from Supabase: {str(e)}")
 
         zip_buffer.seek(0)
 
@@ -548,7 +565,6 @@ def download_all_attachments(ticket_id):
     finally:
         cursor.close()
         conn.close()
-
 
    
 @user_bp.route('/update_account', methods=['POST'])

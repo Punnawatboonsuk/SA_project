@@ -1,10 +1,13 @@
 import os
 from datetime import datetime
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify,send_file
 from dotenv import load_dotenv
 import mariadb
 import psycopg2
 import psycopg2.extras
+import supabase
+import zipfile
+import io
 load_dotenv()
 
 mod_bp = Blueprint('mod', __name__, url_prefix='/mod')
@@ -39,7 +42,7 @@ def mod_main():
                 t.type, t.urgency
             FROM Tickets t
             ORDER BY t.create_date DESC
-        """,)
+        """)
         tickets = cursor.fetchall()
 
         return render_template(
@@ -51,7 +54,360 @@ def mod_main():
         cursor.close()
         conn.close()
 
-@mod_bp.route("/ticket/<ticket_id>", methods=["GET", "POST"])
+from flask import jsonify  # Add this import at the top
+
+# Add these API endpoints to mod_main_core.py
+
+@mod_bp.route('/api/tickets/<ticket_id>', methods=['GET'])
+def api_get_ticket(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        cursor.execute("""
+            SELECT t.*, 
+                   ra.username AS customer_name,
+                   ra.email AS customer_email,
+                   ra.contact_number AS customer_phone,
+                   aa.username AS current_staff_username,
+                   aa.user_id AS current_staff_id,
+                   aa.email AS current_staff_contact
+            FROM Tickets t
+            JOIN Accounts ra ON t.reporter_id = ra.user_id
+            LEFT JOIN Accounts aa ON t.assigner_id = aa.user_id
+            WHERE t.ticket_id = %s
+        """, (ticket_id,))
+        ticket = cursor.fetchone()
+
+        if not ticket:
+            return jsonify({"message": "Ticket not found"}), 404
+
+        # Format the response
+        ticket_data = {
+            "id": ticket["ticket_id"],
+            "title": ticket["title"],
+            "description": ticket["description"],
+            "status": ticket["status"],
+            "type": ticket["type"],
+            "urgency": ticket["urgency"],
+            "created_date": ticket["create_date"].isoformat() if ticket["create_date"] else None,
+            "last_update": ticket["last_update"].isoformat() if ticket["last_update"] else None,
+            "customer_name": ticket["customer_name"],
+            "customer_email": ticket["customer_email"],
+            "customer_phone": ticket["customer_phone"],
+            "current_staff_username": ticket["current_staff_username"],
+            "current_staff_id": ticket["current_staff_id"],
+            "current_staff_contact": ticket["current_staff_contact"],
+            "client_messages": ticket.get("client_message", ""),
+            "dev_messages": ticket.get("dev_message", "")
+        }
+
+        return jsonify(ticket_data)
+        
+    except Exception as e:
+        return jsonify({"message": f"Error fetching ticket: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mod_bp.route('/api/tickets/<ticket_id>/update', methods=['POST'])
+def api_update_ticket(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        now = datetime.now()
+        client_message = data.get('client_message', '')
+        dev_message = data.get('dev_message', '')
+
+        cursor.execute("""
+            UPDATE Tickets 
+            SET client_message = %s, dev_message = %s, last_update = %s 
+            WHERE ticket_id = %s
+            RETURNING *
+        """, (client_message, dev_message, now, ticket_id))
+
+        if cursor.rowcount == 0:
+            return jsonify({"message": "Ticket not found"}), 404
+
+        # Log the transaction
+        cursor.execute("""
+            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (ticket_id, 'message_update', session["user_id"], now, 'Moderator updated ticket messages'))
+
+        conn.commit()
+        return jsonify({"message": "Updates saved successfully!"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"message": f"Update failed: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mod_bp.route('/api/tickets/<ticket_id>/assign', methods=['POST'])
+def api_assign_ticket(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.get_json()
+    if not data or 'staff_id' not in data:
+        return jsonify({"message": "Staff ID is required"}), 400
+
+    staff_id = data['staff_id']
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        now = datetime.now()
+        
+        # Verify staff exists and is actually a staff member
+        cursor.execute("SELECT user_id, username FROM Accounts WHERE user_id = %s AND role = 'Staff'", (staff_id,))
+        staff = cursor.fetchone()
+        
+        if not staff:
+            return jsonify({"message": "Invalid staff member"}), 400
+
+        cursor.execute("""
+            UPDATE Tickets 
+            SET status = 'Assign-in_queue', assigner_id = %s, last_update = %s 
+            WHERE ticket_id = %s
+            RETURNING *
+        """, (staff_id, now, ticket_id))
+
+        if cursor.rowcount == 0:
+            return jsonify({"message": "Ticket not found"}), 404
+
+        # Log the transaction
+        details = f'Ticket assigned to staff: {staff["username"]} (ID: {staff_id})'
+        cursor.execute("""
+            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (ticket_id, 'assign', session["user_id"], now, details))
+
+        conn.commit()
+        return jsonify({"message": f"Ticket assigned to {staff['username']} successfully!"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"message": f"Assignment failed: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mod_bp.route('/api/tickets/<ticket_id>/status', methods=['POST'])
+def api_change_status(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.get_json()
+    if not data or 'status' not in data:
+        return jsonify({"message": "Status is required"}), 400
+
+    new_status = data['status']
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        now = datetime.now()
+        
+        # Map frontend status names to database status values
+        status_mapping = {
+            'Escalated': 'On going to upper level',
+            'Outsourced': 'Out of service / outsource requirement',
+            'Resolved': 'Resolved',
+            'Closed': 'Closed'
+        }
+        
+        db_status = status_mapping.get(new_status, new_status)
+        
+        cursor.execute("""
+            UPDATE Tickets 
+            SET status = %s, last_update = %s 
+            WHERE ticket_id = %s
+            RETURNING *
+        """, (db_status, now, ticket_id))
+
+        if cursor.rowcount == 0:
+            return jsonify({"message": "Ticket not found"}), 404
+
+        # Log the transaction
+        cursor.execute("""
+            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (ticket_id, 'status_change', session["user_id"], now, f'Status changed to {db_status}'))
+
+        conn.commit()
+        return jsonify({"message": f"Status changed to {new_status} successfully!"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"message": f"Status change failed: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mod_bp.route('/api/tickets/<ticket_id>/attachments', methods=['GET'])
+def api_get_attachments(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        cursor.execute("""
+            SELECT id, filename, mime_type as file_type, upload_date
+            FROM ticket_attachments
+            WHERE ticket_id = %s
+            ORDER BY upload_date DESC
+        """, (ticket_id,))
+        attachments = cursor.fetchall()
+
+        # Convert datetime to string for JSON
+        for att in attachments:
+            if isinstance(att["upload_date"], datetime):
+                att["upload_date"] = att["upload_date"].isoformat()
+
+        return jsonify(attachments), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Error fetching attachments: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mod_bp.route('/api/tickets/<ticket_id>/attachments/download-all', methods=['GET'])
+def api_download_all_attachments(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        cursor.execute("""
+            SELECT id, filename, mime_type, filedata, file_url
+            FROM ticket_attachments
+            WHERE ticket_id = %s
+        """, (ticket_id,))
+        attachments = cursor.fetchall()
+
+        if not attachments:
+            return jsonify({"message": "No attachments found"}), 404
+
+        # Your existing download code here (same as staff version)
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zipf:
+            for att in attachments:
+                if att["filedata"]:
+                    zipf.writestr(att["filename"], att["filedata"])
+                elif att["file_url"]:
+                    try:
+                        bucket_name = "large_file_for_db"
+                        storage_path = "/".join(att["file_url"].split(bucket_name + "/")[1:])
+                        res = supabase.storage.from_(bucket_name).download(storage_path)
+                        if res is not None:
+                            zipf.writestr(att["filename"], res)
+                        else:
+                            zipf.writestr(att["filename"] + ".url.txt",
+                                          f"File could not be retrieved, original URL:\n{att['file_url']}")
+                    except Exception as e:
+                        zipf.writestr(att["filename"] + ".error.txt",
+                                      f"Error fetching from Supabase: {str(e)}")
+
+        zip_buffer.seek(0)
+        return send_file(
+            zip_buffer,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=f"ticket_attachments_{ticket_id}.zip"
+        )
+
+    except Exception as e:
+        return jsonify({"message": f"Download failed: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mod_bp.route('/api/tickets/<ticket_id>/staff', methods=['GET'])
+def api_get_matching_staff(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        # Get ticket type first
+        cursor.execute("SELECT type FROM Tickets WHERE ticket_id = %s", (ticket_id,))
+        ticket = cursor.fetchone()
+        
+        if not ticket:
+            return jsonify({"message": "Ticket not found"}), 404
+
+        ticket_type = ticket['type']
+        
+        # Get staff with matching specialties (string comparison)
+        cursor.execute("""
+            SELECT 
+                a.user_id,
+                a.username,
+                s.speciality_name AS specialty,
+                COUNT(t2.ticket_id) AS current_assignment_count
+            FROM Accounts a
+            JOIN StaffSpeciality s ON a.user_id = s.staff_id
+            LEFT JOIN Tickets t2 ON a.user_id = t2.assigner_id 
+                AND t2.status NOT IN ('Closed', 'Resolved')
+            WHERE a.role = 'Staff'
+              AND LOWER(s.speciality_name) LIKE LOWER(CONCAT('%%', %s, '%%'))
+            GROUP BY a.user_id, a.username, s.speciality_name
+            ORDER BY current_assignment_count ASC
+        """, (ticket_type,))
+        
+        matching_staff = cursor.fetchall()
+
+        # Get all staff for fallback
+        cursor.execute("""
+            SELECT 
+                a.user_id,
+                a.username,
+                GROUP_CONCAT(DISTINCT s.speciality_name) AS specialties,
+                COUNT(t2.ticket_id) AS current_assignment_count
+            FROM Accounts a
+            LEFT JOIN StaffSpeciality s ON a.user_id = s.staff_id
+            LEFT JOIN Tickets t2 ON a.user_id = t2.assigner_id 
+                AND t2.status NOT IN ('Closed', 'Resolved')
+            WHERE a.role = 'Staff'
+            GROUP BY a.user_id, a.username
+            ORDER BY current_assignment_count ASC
+        """)
+        
+        all_staff = cursor.fetchall()
+
+        return jsonify({
+            "matching_staff": matching_staff,
+            "all_staff": all_staff
+        }), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Error fetching staff: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mod_bp.route("/ticket/<ticket_id>", methods=["GET"])
 def mod_view_ticket(ticket_id):
     if "user_id" not in session or session.get("role") != "Mod":
         flash("Please log in as a moderator to access this page", "error")
@@ -62,176 +418,7 @@ def mod_view_ticket(ticket_id):
         flash("Invalid ticket ID", "error")
         return redirect(url_for('mod.mod_main'))
 
-    mod_id = session.get("user_id")
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
-
-    try:
-        # First, get the current ticket details to preserve existing messages
-        cursor.execute("""
-            SELECT t.*, 
-                   a.username AS reporter_name,
-                   b.username AS assigner_name
-            FROM Tickets t
-            LEFT JOIN Accounts a ON t.reporter_id = a.user_id
-            LEFT JOIN Accounts b ON t.assigner_id = b.user_id
-            WHERE t.ticket_id = %s
-        """, (ticket_id,))
-        ticket = cursor.fetchone()
-
-        if not ticket:
-            flash("Ticket not found", "error")
-            return redirect(url_for('mod.mod_main'))
-
-        # Handle form submission
-        if request.method == "POST":
-            action = request.form.get("action")
-            selected_staff_id = request.form.get("selected_staff_id")
-            now = datetime.now()
-            
-            # Get the current values from the database to preserve unchanged messages
-            current_client_message = ticket.get("client_message", "")
-            current_dev_message = ticket.get("dev_message", "")
-            
-            # Get new values from form, using current values as defaults if not provided
-            client_message = request.form.get("client_message", current_client_message)
-            dev_message = request.form.get("dev_message", current_dev_message)
-
-            # Check if messages were actually changed
-            messages_changed = (
-                client_message != current_client_message or 
-                dev_message != current_dev_message
-            )
-
-            # Update messages if they were changed or if it's a save action
-            if messages_changed or action == "save":
-                cursor.execute("""
-                    UPDATE Tickets 
-                    SET client_message = %s, dev_message = %s, last_update = %s 
-                    WHERE ticket_id = %s
-                """, (client_message, dev_message, now, ticket_id))
-                conn.commit()
-                
-                if messages_changed:
-                    flash("Messages updated successfully", "success")
-                    cursor.execute("""
-                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (ticket_id, 'update message', mod_id, now, 'ticket message was update by mod'))
-                else:
-                    flash("No changes to messages", "info")
-
-            # Handle status changes and assignments
-            if action == "assign" and selected_staff_id:
-                cursor.execute("""
-                    UPDATE Tickets
-                    SET status = 'Assign-in_queue', assigner_id = %s, last_update = %s
-                    WHERE ticket_id = %s
-                """, (selected_staff_id, now, ticket_id))
-                if cursor.rowcount > 0:
-                    flash("Ticket assigned successfully", "success")
-                    recordmessage = 'ticket was assign to the staff at id : '+ selected_staff_id
-                    cursor.execute("""
-                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (ticket_id, 'assigning', mod_id, now, recordmessage))
-                else:
-                    flash("Could not assign ticket", "warning")
-
-            elif action == "send_upper":
-                cursor.execute("""
-                    UPDATE Tickets
-                    SET status = 'On going to upper level', last_update = %s
-                    WHERE ticket_id = %s
-                """, (now, ticket_id))
-                if cursor.rowcount > 0:
-                    flash("Ticket sent to upper level", "success")
-                    cursor.execute("""
-                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (ticket_id, 'sending upper ', mod_id, now, 'the ticket involve higher level of system in order to resolve'))
-                else:
-                    flash("Could not update ticket status", "warning")
-
-            elif action == "out_of_service":
-                cursor.execute("""
-                    UPDATE Tickets
-                    SET status = 'Out of service / outsource requirement', last_update = %s
-                    WHERE ticket_id = %s
-                """, (now, ticket_id))
-                if cursor.rowcount > 0:
-                    flash("Ticket marked as out of service", "success")
-                    cursor.execute("""
-                INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (ticket_id, 'mark as out of service', mod_id, now, 'the ticket is unsolvable or require outernal requirement'))
-                else:
-                    flash("Could not update ticket status", "warning")
-                    
-            conn.commit()
-            return redirect(url_for("mod.mod_view_ticket", ticket_id=ticket_id))
-
-        matching_staff = []
-        if ticket['type'] == 0:
-            # For undecided tickets, don't try to match by specialty
-            show_matching_staff = False
-            flash("This ticket has an undecided type. Showing all available staff.", "info")
-        else:
-            # For tickets with a specific type, find staff with matching specialties
-            show_matching_staff = True
-            cursor.execute("""
-                SELECT 
-                    a.user_id,
-                    a.username,
-                    GROUP_CONCAT(DISTINCT s.speciality_name ORDER BY s.speciality_name SEPARATOR ', ') AS specialties,
-                    COUNT(t2.ticket_id) AS current_assignment_count
-                FROM Accounts a
-                JOIN StaffSpeciality s ON a.user_id = s.staff_id
-                LEFT JOIN Tickets t2 ON a.user_id = t2.assigner_id 
-                    AND t2.status NOT IN ('Closed', 'Rejected', 'Resolved')
-                WHERE a.role = 'Staff'
-                  AND s.speciality_name IN (
-                    SELECT tt.type_name 
-                    FROM TicketType tt 
-                    WHERE tt.type_id = %s
-                  )
-                GROUP BY a.user_id, a.username
-                ORDER BY current_assignment_count ASC
-            """, ( ticket['type']))
-            matching_staff = cursor.fetchall()
-
-        # Get all staff under this mod with their ticket counts
-        cursor.execute("""
-            SELECT 
-                a.user_id,
-                a.username,
-                GROUP_CONCAT(DISTINCT s.speciality_name ORDER BY s.speciality_name SEPARATOR ', ') AS specialties,
-                COUNT(t2.ticket_id) AS current_assignment_count
-            FROM Accounts a
-            LEFT JOIN StaffSpeciality s ON a.user_id = s.staff_id
-            LEFT JOIN Tickets t2 ON a.user_id = t2.assigner_id 
-                AND t2.status NOT IN ('Closed')
-            WHERE a.role = 'Staff'
-             
-            GROUP BY a.user_id, a.username
-            ORDER BY current_assignment_count ASC
-        """)
-        all_staff = cursor.fetchall()
-
-        return render_template(
-            "mod_ticket_view.html",
-            ticket=ticket,
-            matching_staff=matching_staff,
-            all_staff=all_staff,
-            selected_staff_id=ticket.get('assigner_id')
-        )
-    except Exception as e:
-        flash(f"Error accessing ticket: {str(e)}", "error")
-        return redirect(url_for('mod.mod_main'))
-    finally:
-        cursor.close()
-        conn.close()
+    return render_template("mod_ticket_view.html", ticket_id=ticket_id)
 @mod_bp.route('/reset_filters')
 def reset_filters():
     flash("Filters reset", "info")
@@ -269,6 +456,55 @@ def transaction_history():
     except Exception as e:
         flash(f"Error retrieving transaction history: {str(e)}", "error")
         return render_template("mod_transaction_history.html", transactions=[], error=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+@mod_bp.route('/api/tickets/<ticket_id>/update', methods=['POST'])
+def api_update_ticket(ticket_id):
+    if "user_id" not in session or session.get("role") != "Staff":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    staff_id = session.get("user_id")
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        # Get current ticket to preserve unchanged messages
+        cursor.execute("SELECT client_message, dev_message FROM Tickets WHERE ticket_id = %s AND assigner_id = %s", 
+                      (ticket_id, staff_id))
+        current_ticket = cursor.fetchone()
+        
+        if not current_ticket:
+            return jsonify({"message": "Ticket not found"}), 404
+
+        # Use new values or keep current ones
+        client_message = data.get('client_message', current_ticket['client_message'])
+        dev_message = data.get('dev_message', current_ticket['dev_message'])
+        now = datetime.now()
+
+        cursor.execute("""
+            UPDATE Tickets 
+            SET client_message = %s, dev_message = %s, last_update = %s 
+            WHERE ticket_id = %s AND assigner_id = %s
+        """, (client_message, dev_message, now, ticket_id, staff_id))
+        
+        # Log the transaction
+        cursor.execute("""
+            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (ticket_id, 'message_update', staff_id, now, 'Staff updated ticket messages'))
+
+        conn.commit()
+        return jsonify({"message": "Updates saved successfully!"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"message": f"Update failed: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()

@@ -298,6 +298,61 @@
             display: none;
         }
 
+        .attachments-container {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .attachments-table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .attachments-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        .attachments-table th {
+            background: #ed8936;
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            border-bottom: 2px solid #c05621;
+        }
+
+        .attachments-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #2d3748;
+        }
+
+        .attachments-table tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        .no-attachments {
+            text-align: center;
+            color: #718096;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .file-type-badge {
+            background: #e2e8f0;
+            color: #4a5568;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -404,6 +459,33 @@
                 </div>
             </div>
 
+            <div class="description-section">
+                <h3 class="section-title">Ticket Attachments</h3>
+                <div class="attachments-container">
+                    <div class="attachments-header">
+                        <button type="button" class="btn btn-primary" id="downloadAllBtn" onclick="downloadAllFiles()" style="margin-bottom: 15px;">
+                            📥 Download All Files
+                        </button>
+                    </div>
+                    <div class="attachments-table-container">
+                        <table class="attachments-table" id="attachmentsTable">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>File Type</th>
+                                    <th>Upload Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attachmentsTableBody">
+                                <tr>
+                                    <td colspan="3" class="no-attachments">Loading attachments...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div class="update-section">
                 <h3 class="section-title">Change Status</h3>
                 <div class="status-buttons">
@@ -453,163 +535,247 @@
         // Get ticket ID from URL parameters
         
         // Get ticket ID from backend (passed as template variable)
-        const ticketId = {{ ticket_id }};
+        const ticketId = {{ ticket.ticket_id }};
 
-// Load ticket data when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    loadTicketData();
-});
-
-// Load ticket data from Flask API
-async function loadTicketData() {
-    try {
-        const response = await fetch(`/staff/api/tickets/${ticketId}`);
-        if (response.ok) {
-            const ticket = await response.json();
-            populateTicketData(ticket);
-        } else {
-            showMessage('Failed to load ticket data', 'error');
-        }
-    } catch (error) {
-        console.error('Error loading ticket:', error);
-        showMessage('Error loading ticket data', 'error');
-    }
-}
-
-// Populate ticket data in the page
-function populateTicketData(ticket) {
-    document.getElementById('ticketId').textContent = ticket.id;
-    document.getElementById('ticketTitle').textContent = ticket.title;
-    document.getElementById('ticketType').textContent = ticket.type;
-    document.getElementById('ticketUrgency').textContent = ticket.urgency;
-    document.getElementById('ticketStatus').textContent = ticket.status;
-    document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
-    document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
-    document.getElementById('customerName').textContent = ticket.customer_name || 'Unknown Customer';
-    document.getElementById('customerEmail').textContent = ticket.customer_email || 'N/A';
-    document.getElementById('customerPhone').textContent = ticket.customer_phone || 'N/A';
-    document.getElementById('originalDescription').textContent = ticket.description;
-    document.getElementById('clientMessages').textContent = ticket.client_messages || 'No client messages';
-    document.getElementById('devMessages').textContent = ticket.dev_messages || 'No developer messages';
-
-    // Update badges
-    updateStatusBadge(ticket.status);
-    updateUrgencyBadge(ticket.urgency);
-    document.getElementById('typeBadge').textContent = ticket.type;
-}
-
-// Update status badge styling
-function updateStatusBadge(status) {
-    const badge = document.getElementById('statusBadge');
-    badge.className = `badge status-${status.toLowerCase().replace(' ', '-')}`;
-    badge.textContent = status;
-}
-
-// Update urgency badge styling
-function updateUrgencyBadge(urgency) {
-    const badge = document.getElementById('urgencyBadge');
-    badge.className = `badge urgency-${urgency.toLowerCase()}`;
-    badge.textContent = urgency + ' Priority';
-}
-
-// Format date for display
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString();
-}
-
-// Handle form submission
-document.getElementById('updateForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const newClientMessage = document.getElementById('newClientMessage').value.trim();
-    const newDevMessage = document.getElementById('newDevMessage').value.trim();
-    
-    if (!newClientMessage && !newDevMessage) {
-        showMessage('Please enter at least one message update', 'error');
-        return;
-    }
-
-    const saveBtn = document.getElementById('saveBtn');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
-
-    try {
-        const response = await fetch(`/staff/api/tickets/${ticketId}/update`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                client_message: newClientMessage,
-                dev_message: newDevMessage
-            })
+        // Load ticket data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTicketData();
+            loadAttachments();
         });
 
-        const result = await response.json();
-        
-        if (response.ok) {
-            showMessage(result.message || 'Updates saved successfully!', 'success');
-            document.getElementById('newClientMessage').value = '';
-            document.getElementById('newDevMessage').value = '';
+        // Load ticket data from Flask API
+        async function loadTicketData() {
+            try {
+                const response = await fetch(`/staff/api/tickets/${ticketId}`);
+                if (response.ok) {
+                    const ticket = await response.json();
+                    populateTicketData(ticket);
+                } else {
+                    showMessage('Failed to load ticket data', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading ticket:', error);
+                showMessage('Error loading ticket data', 'error');
+            }
+        }
+
+        // Populate ticket data in the page
+        function populateTicketData(ticket) {
+            document.getElementById('ticketId').textContent = ticket.id;
+            document.getElementById('ticketTitle').textContent = ticket.title;
+            document.getElementById('ticketType').textContent = ticket.type;
+            document.getElementById('ticketUrgency').textContent = ticket.urgency;
+            document.getElementById('ticketStatus').textContent = ticket.status;
+            document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
+            document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
+            document.getElementById('customerName').textContent = ticket.customer_name || 'Unknown Customer';
+            document.getElementById('customerEmail').textContent = ticket.customer_email || 'N/A';
+            document.getElementById('customerPhone').textContent = ticket.customer_phone || 'N/A';
+            document.getElementById('originalDescription').textContent = ticket.description;
+            document.getElementById('clientMessages').textContent = ticket.client_messages || 'No client messages';
+            document.getElementById('devMessages').textContent = ticket.dev_messages || 'No developer messages';
+
+            // Update badges
+            updateStatusBadge(ticket.status);
+            updateUrgencyBadge(ticket.urgency);
+            document.getElementById('typeBadge').textContent = ticket.type;
+        }
+
+        // Update status badge styling
+        function updateStatusBadge(status) {
+            const badge = document.getElementById('statusBadge');
+            badge.className = `badge status-${status.toLowerCase().replace(' ', '-')}`;
+            badge.textContent = status;
+        }
+
+        // Update urgency badge styling
+        function updateUrgencyBadge(urgency) {
+            const badge = document.getElementById('urgencyBadge');
+            badge.className = `badge urgency-${urgency.toLowerCase()}`;
+            badge.textContent = urgency + ' Priority';
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        // Handle form submission
+        document.getElementById('updateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const newClientMessage = document.getElementById('newClientMessage').value.trim();
+            const newDevMessage = document.getElementById('newDevMessage').value.trim();
+            
+            if (!newClientMessage && !newDevMessage) {
+                showMessage('Please enter at least one message update', 'error');
+                return;
+            }
+
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch(`/staff/api/tickets/${ticketId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        client_message: newClientMessage,
+                        dev_message: newDevMessage
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(result.message || 'Updates saved successfully!', 'success');
+                    document.getElementById('newClientMessage').value = '';
+                    document.getElementById('newDevMessage').value = '';
+                    setTimeout(() => {
+                        loadTicketData();
+                    }, 1000);
+                } else {
+                    showMessage(result.message || 'Failed to save updates', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving updates:', error);
+                showMessage('Error saving updates', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Updates';
+            }
+        });
+
+        // Status change function
+        async function changeStatus(newStatus) {
+            if (!confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/staff/api/tickets/${ticketId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        status: newStatus
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`Status changed to ${newStatus} successfully!`, 'success');
+                    loadTicketData(); // Reload to show updated status
+                } else {
+                    showMessage(result.message || 'Failed to change status', 'error');
+                }
+            } catch (error) {
+                console.error('Error changing status:', error);
+                showMessage('Error changing status', 'error');
+            }
+        }
+
+        // Show message function
+        function showMessage(text, type) {
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.textContent = text;
+            messageContainer.className = `message ${type}`;
+            messageContainer.classList.remove('hidden');
+            
             setTimeout(() => {
-                loadTicketData();
-            }, 1000);
-        } else {
-            showMessage(result.message || 'Failed to save updates', 'error');
+                messageContainer.classList.add('hidden');
+            }, 5000);
         }
-    } catch (error) {
-        console.error('Error saving updates:', error);
-        showMessage('Error saving updates', 'error');
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save Updates';
-    }
-});
 
-// Status change function
-async function changeStatus(newStatus) {
-    if (!confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/staff/api/tickets/${ticketId}/status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                status: newStatus
-            })
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            showMessage(`Status changed to ${newStatus} successfully!`, 'success');
-            loadTicketData(); // Reload to show updated status
-        } else {
-            showMessage(result.message || 'Failed to change status', 'error');
+        // Load attachments from Flask API
+        async function loadAttachments() {
+            try {
+                const response = await fetch(`/staff/api/tickets/${ticketId}/attachments`);
+                if (response.ok) {
+                    const attachments = await response.json();
+                    displayAttachments(attachments);
+                } else {
+                    console.error('Failed to load attachments');
+                    displayAttachments([]);
+                }
+            } catch (error) {
+                console.error('Error loading attachments:', error);
+                displayAttachments([]);
+            }
         }
-    } catch (error) {
-        console.error('Error changing status:', error);
-        showMessage('Error changing status', 'error');
-    }
-}
 
-// Show message function
-function showMessage(text, type) {
-    const messageContainer = document.getElementById('messageContainer');
-    messageContainer.textContent = text;
-    messageContainer.className = `message ${type}`;
-    messageContainer.classList.remove('hidden');
-    
-    setTimeout(() => {
-        messageContainer.classList.add('hidden');
-    }, 5000);
-}
+        // Display attachments in table
+        function displayAttachments(attachments) {
+            const tableBody = document.getElementById('attachmentsTableBody');
+            
+            if (attachments.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="no-attachments">No attachments found</td></tr>';
+                document.getElementById('downloadAllBtn').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('downloadAllBtn').style.display = 'inline-block';
+            
+            tableBody.innerHTML = attachments.map(attachment => `
+                <tr>
+                    <td>${escapeHtml(attachment.filename)}</td>
+                    <td><span class="file-type-badge">${escapeHtml(attachment.file_type)}</span></td>
+                    <td>${formatDate(attachment.upload_date)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Download all files as ZIP
+        async function downloadAllFiles() {
+            const downloadBtn = document.getElementById('downloadAllBtn');
+            const originalText = downloadBtn.textContent;
+            
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = '📦 Creating ZIP...';
+
+            try {
+                const response = await fetch(`/staff/api/tickets/${ticketId}/attachments/download-all`, {
+                    method: 'GET'
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ticket-${ticketId}-attachments.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showMessage('All files downloaded successfully!', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.message || 'Failed to download files', 'error');
+                }
+            } catch (error) {
+                console.error('Error downloading files:', error);
+                showMessage('Error downloading files', 'error');
+            } finally {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = originalText;
+            }
+        }
+
+        // Utility function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
     </script>
 </body>
 </html>

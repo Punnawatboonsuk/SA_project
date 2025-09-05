@@ -483,30 +483,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr onclick="selectStaff(this, 'ST002', 'mike_network', 'Network Administration', 'medium')">
-                            <td>ST002</td>
-                            <td>mike_network</td>
-                            <td>Network Administration</td>
-                            <td><span class="workload-badge workload-medium">Medium (3/5)</span></td>
-                        </tr>
-                        <tr onclick="selectStaff(this, 'ST003', 'sarah_security', 'Security & Access', 'low')">
-                            <td>ST003</td>
-                            <td>sarah_security</td>
-                            <td>Security & Access</td>
-                            <td><span class="workload-badge workload-low">Low (1/5)</span></td>
-                        </tr>
-                        <tr onclick="selectStaff(this, 'ST004', 'alex_email', 'Email Systems', 'high')">
-                            <td>ST004</td>
-                            <td>alex_email</td>
-                            <td>Email Systems</td>
-                            <td><span class="workload-badge workload-high">High (4/5)</span></td>
-                        </tr>
-                        <tr onclick="selectStaff(this, 'ST005', 'lisa_hardware', 'Hardware Support', 'low')">
-                            <td>ST005</td>
-                            <td>lisa_hardware</td>
-                            <td>Hardware Support</td>
-                            <td><span class="workload-badge workload-low">Low (2/5)</span></td>
-                        </tr>
+                    
                     </tbody>
                 </table>
             </div>
@@ -514,21 +491,46 @@
             <div class="description-section">
                 <h3 class="section-title">Original Description</h3>
                 <div class="description-box" id="originalDescription">
-                    I am unable to access my company email account since this morning. When I try to log in, I get an error message saying "Authentication failed". I have tried resetting my password but the issue persists. This is affecting my ability to communicate with clients and complete my work tasks.
+                    
                 </div>
             </div>
 
             <div class="description-section">
                 <h3 class="section-title">Client Messages</h3>
                 <div class="description-box" id="clientMessages">
-                    Update: I tried accessing email from a different browser but still getting the same error. The issue started after the system maintenance last night. Please help resolve this urgently as I have important client meetings today.
+                    
                 </div>
             </div>
 
             <div class="description-section">
                 <h3 class="section-title">Developer Messages</h3>
                 <div class="description-box" id="devMessages">
-                    Checked server logs - authentication service was down during maintenance window. Restarted service and cleared cache. Monitoring for additional issues.
+                   
+            </div>
+
+            <!-- Added ticket attachments section for moderator view -->
+            <div class="description-section">
+                <h3 class="section-title">Ticket Attachments</h3>
+                <div id="attachmentsContainer">
+                    <table class="staff-table" id="attachmentsTable">
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>File Type</th>
+                                <th>Upload Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attachmentsTableBody">
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #718096; font-style: italic;">Loading attachments...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 15px;">
+                        <button type="button" class="btn-mod btn-save" id="downloadAllBtn" onclick="downloadAllAttachments()" disabled>
+                            📥 Download All Files
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -575,10 +577,11 @@
     <script>
         let selectedStaff = null;
 
-        const ticketId = {{ ticket_id }};
+        const ticketId = "{{ ticket_id }}";
 
         document.addEventListener('DOMContentLoaded', function() {
             loadTicketData();
+            loadStaffData();
         });
 
         function selectStaff(row, staffId, username, speciality, workload) {
@@ -607,6 +610,7 @@
                 if (response.ok) {
                     const ticket = await response.json();
                     populateTicketData(ticket);
+                    loadAttachments();
                 } else {
                     showMessage('Failed to load ticket data', 'error');
                 }
@@ -614,6 +618,84 @@
                 console.error('Error loading ticket:', error);
                 showMessage('Error loading ticket data', 'error');
             }
+        }
+
+        async function loadAttachments() {
+            try {
+                const response = await fetch(`/mod/api/tickets/${ticketId}/attachments`);
+                if (response.ok) {
+                    const attachments = await response.json();
+                    displayAttachments(attachments);
+                } else {
+                    console.error('Failed to load attachments');
+                    displayAttachments([]);
+                }
+            } catch (error) {
+                console.error('Error loading attachments:', error);
+                displayAttachments([]);
+            }
+        }
+
+        function displayAttachments(attachments) {
+            const tableBody = document.getElementById('attachmentsTableBody');
+            const downloadBtn = document.getElementById('downloadAllBtn');
+            
+            if (attachments.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #718096; font-style: italic;">No attachments found</td></tr>';
+                downloadBtn.disabled = true;
+                return;
+            }
+            
+            tableBody.innerHTML = attachments.map(attachment => `
+                <tr>
+                    <td>${escapeHtml(attachment.filename)}</td>
+                    <td>${escapeHtml(attachment.file_type)}</td>
+                    <td>${formatDate(attachment.upload_date)}</td>
+                </tr>
+            `).join('');
+            
+            downloadBtn.disabled = false;
+        }
+
+        async function downloadAllAttachments() {
+            const downloadBtn = document.getElementById('downloadAllBtn');
+            const originalText = downloadBtn.textContent;
+            
+            try {
+                downloadBtn.textContent = '⏳ Preparing Download...';
+                downloadBtn.disabled = true;
+                
+                const response = await fetch(`/mod/api/tickets/${ticketId}/attachments/download-all`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ticket-${ticketId}-attachments.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showMessage('All attachments downloaded successfully!', 'success');
+                } else {
+                    const result = await response.json();
+                    showMessage(result.message || 'Failed to download attachments', 'error');
+                }
+            } catch (error) {
+                console.error('Error downloading attachments:', error);
+                showMessage('Error downloading attachments', 'error');
+            } finally {
+                downloadBtn.textContent = originalText;
+                downloadBtn.disabled = false;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         function populateTicketData(ticket) {
@@ -640,11 +722,26 @@
             document.getElementById('typeBadge').textContent = ticket.type;
         }
 
-        function updateStatusBadge(status) {
-            const badge = document.getElementById('statusBadge');
-            badge.className = `badge status-${status.toLowerCase().replace(' ', '-')}`;
-            badge.textContent = status;
-        }
+       function updateStatusBadge(status) {
+    const badge = document.getElementById('statusBadge');
+    
+    // Map database status values to CSS classes
+    const statusClassMap = {
+        'Open': 'status-open',
+        'Assign-in_queue': 'status-open',
+        'Assign-working_on': 'status-in-progress',
+        'in_checking': 'status-in-progress',
+        'On going to upper level': 'status-in-progress',
+        'Out of service / outsource requirement': 'status-in-progress',
+        'Resolved': 'status-resolved',
+        'Closed': 'status-closed',
+        'Pending': 'status-in-progress'
+    };
+    
+    const badgeClass = statusClassMap[status] || 'status-open';
+    badge.className = `badge ${badgeClass}`;
+    badge.textContent = status.replace('Assign-', '').replace('_', ' ');
+}
 
         function updateUrgencyBadge(urgency) {
             const badge = document.getElementById('urgencyBadge');
@@ -776,6 +873,85 @@
                 messageContainer.classList.add('hidden');
             }, 5000);
         }
+        async function loadStaffData() {
+    try {
+        const response = await fetch(`/mod/api/tickets/${ticketId}/staff`);
+        if (response.ok) {
+            const staffData = await response.json();
+            populateStaffTable(staffData.matching_staff, staffData.all_staff);
+        } else {
+            console.error('Failed to load staff data');
+            showMessage('Failed to load staff information', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading staff data:', error);
+        showMessage('Error loading staff information', 'error');
+    }
+}
+
+function populateStaffTable(matchingStaff, allStaff) {
+    const tableBody = document.getElementById('staffTable').querySelector('tbody');
+    
+    // Clear existing rows
+    tableBody.innerHTML = '';
+    
+    // Add matching staff first
+    if (matchingStaff && matchingStaff.length > 0) {
+        matchingStaff.forEach(staff => {
+            const workload = getWorkloadLevel(staff.current_assignment_count);
+            const row = createStaffRow(staff, workload);
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Add all staff as fallback
+    if (allStaff && allStaff.length > 0) {
+        allStaff.forEach(staff => {
+            const workload = getWorkloadLevel(staff.current_assignment_count);
+            const row = createStaffRow(staff, workload);
+            tableBody.appendChild(row);
+        });
+    }
+    
+    if (tableBody.children.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #718096; font-style: italic;">No staff members found</td></tr>';
+    }
+}
+
+function createStaffRow(staff, workload) {
+    const row = document.createElement('tr');
+    row.onclick = () => selectStaff(
+        row, 
+        staff.user_id, 
+        staff.username, 
+        staff.specialty || staff.specialties, 
+        workload
+    );
+    
+    row.innerHTML = `
+        <td>${escapeHtml(staff.user_id)}</td>
+        <td>${escapeHtml(staff.username)}</td>
+        <td>${escapeHtml(staff.specialty || staff.specialties || 'No specialty')}</td>
+        <td><span class="workload-badge workload-${workload}">${getWorkloadText(staff.current_assignment_count, workload)}</span></td>
+    `;
+    
+    return row;
+}
+
+function getWorkloadLevel(assignmentCount) {
+    if (assignmentCount <= 2) return 'low';
+    if (assignmentCount <= 4) return 'medium';
+    return 'high';
+}
+
+function getWorkloadText(count, level) {
+    const levels = {
+        'low': 'Low',
+        'medium': 'Medium', 
+        'high': 'High'
+    };
+    return `${levels[level]} (${count} tickets)`;
+}
     </script>
 </body>
 </html>
