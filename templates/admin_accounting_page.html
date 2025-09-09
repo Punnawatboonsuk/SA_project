@@ -338,40 +338,104 @@
                     </div>
                 </div>
 
-                <button type="submit" class="save-btn">Save Changes</button>
+                <button type="button" onclick="saveChanges()">Save Changes</button>
             </form>
         </div>
     </div>
+    <script>
+        async function saveChanges() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const accountId = urlParams.get("userId");
+  if (!accountId) {
+    alert("No account selected");
+    return;
+  }
+
+  // Collect field values
+  const username = document.getElementById("username").value;
+  const email = document.getElementById("email").value;
+  const contactNumber = document.getElementById("contactNumber").value;
+  const role = document.getElementById("role").value;
+  const accountStatus = document.getElementById("accountStatus").value;
+
+  // Collect specialties if Staff
+  let specialties = [];
+  if (role === "Staff") {
+    specialties = Array.from(document.querySelectorAll('input[name="specialties"]:checked'))
+      .map(cb => cb.value);
+  }
+
+  try {
+    const res = await fetch(`/admin/api/update_account/${accountId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: username,
+        email: email,
+        contact_number: contactNumber,
+        role: role,
+        account_status: accountStatus,
+        specialties: specialties
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert("Account updated successfully!");
+    } else {
+      alert("Error updating account: " + data.error);
+    }
+  } catch (err) {
+    console.error("Error updating account:", err);
+    alert("Could not update account.");
+  }
+}
+
+async function loadAccountData() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const accountId = urlParams.get("userId");
+  if (!accountId) return;
+
+  try {
+    const res = await fetch(`/admin/api/get_account/${accountId}`);
+    const account = await res.json();
+
+    if (res.ok) {
+      // Fill text fields
+      document.getElementById("username").value = account.username;
+      document.getElementById("email").value = account.email;
+      document.getElementById("contactNumber").value = account.contact_number;
+      document.getElementById("role").value = account.role;
+      document.getElementById("accountStatus").value = account.account_status;
+
+      // Show specialties section if Staff
+      const section = document.getElementById("specialtiesSection");
+      if (account.role === "Staff") {
+        section.style.display = "block";
+
+        // Pre-check existing specialties
+        account.specialties.forEach(spec => {
+          const checkbox = document.querySelector(`input[name="specialties"][value="${spec}"]`);
+          if (checkbox) checkbox.checked = true;
+        });
+      } else {
+        section.style.display = "none";
+      }
+    } else {
+      alert(account.error || "Failed to load account");
+    }
+  } catch (err) {
+    console.error("Error fetching account:", err);
+    alert("Could not load account details.");
+  }
+}
+
+// Load when page starts
+document.addEventListener("DOMContentLoaded", loadAccountData);
+</script>
+
 
     <script>
-        // Sample account data - in real implementation, this would come from URL parameters or API
-        const sampleAccounts = {
-            'USR001': {
-                userId: 'USR001',
-                username: 'john_doe',
-                role: 'User',
-                activeStatus: 'Active',
-                email: 'john.doe@company.com',
-                contactNumber: '+1-555-0123'
-            },
-            'STF001': {
-                userId: 'STF001',
-                username: 'jane_smith',
-                role: 'Staff',
-                activeStatus: 'Active',
-                email: 'jane.smith@company.com',
-                contactNumber: '+1-555-0124',
-                specialties: ['Software', 'Hardware', 'Network/Connectivity']
-            },
-            'MOD001': {
-                userId: 'MOD001',
-                username: 'mike_wilson',
-                role: 'Mod',
-                activeStatus: 'Active',
-                email: 'mike.wilson@company.com',
-                contactNumber: '+1-555-0125'
-            }
-        };
 
         // Get account ID from URL parameters
         function getAccountIdFromUrl() {
@@ -474,5 +538,6 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', loadAccountData);
     </script>
+
 </body>
 </html>

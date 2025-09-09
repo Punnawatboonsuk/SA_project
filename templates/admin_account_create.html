@@ -263,7 +263,7 @@
                 Please fill in all required fields and select appropriate options.
             </div>
 
-            <form id="createAccountForm">
+            <form id="createAccountForm" method="POST" action="{{ url_for('admin.create_account') }}">
                 <div class="form-group">
                     <label for="username">Username *</label>
                     <input type="text" id="username" name="username" required>
@@ -330,7 +330,7 @@
                     </div>
                 </div>
 
-                <button type="button" class="create-button" onclick="createAccount()">Create Account</button>
+                <button type="button" class="create-button" onclick="create_account()">Create Account</button>
             </form>
         </div>
     </div>

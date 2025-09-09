@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify
 from dotenv import load_dotenv
 import mariadb
 import random
@@ -37,51 +37,56 @@ def generate_unique_user_id():
 
 @admin_bp.route("/admin_account_create", methods=["GET", "POST"])
 def create_account():
-    if session.get("role") != "Admin":
-        return "Unauthorized", 403
-
-    message = error = None
-
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    if "user_id" not in session or session.get("role") != "Admin":
+        flash("Unauthorized access", "error")
+        return redirect(url_for("login"))
 
     if request.method == "POST":
-        username = request.form["username"]
-        plain_password = request.form["password"].encode("utf-8")
-        role = request.form["role"]
-        specialties = request.form.getlist("specialties")
-        hashed_password = bcrypt.hashpw(plain_password, bcrypt.gensalt()).decode("utf-8")
+        username = request.form.get("username")
+        password = request.form.get("password")
+        email = request.form.get("email")
+        contact_number = request.form.get("contactNumber")
+        role = request.form.get("role")
+        specialties = request.form.getlist("specialties")  # multiple checkboxes
 
-        # Generate a new unique user_id
-        user_id = generate_unique_user_id()
+        # ✅ Generate unique user_id (similar to your ticket_id generator)
+        new_user_id = generate_unique_user_id()
+
+        # ✅ Hash password
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
         try:
             # Insert into Accounts
-            cursor.execute(
-                "INSERT INTO Accounts (user_id, username, hashed_password, role, is_banned) VALUES (%s, %s, %s, %s, %s)",
-                (user_id, username, hashed_password, role, False)
-            )
-            conn.commit()
+            cursor.execute("""
+                INSERT INTO Accounts (user_id, username, password_hash, role, account_status, email, contact_number)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (new_user_id, username, password_hash, role, 1, email, contact_number))
 
-            # If staff, insert specialties
+            # Insert specialties if Staff
             if role == "Staff" and specialties:
-                for type_id in specialties:
-                    cursor.execute(
-                        "INSERT INTO Staffspeciality (user_id, type_id) VALUES (%s, %s)",
-                        (user_id, type_id)
-                    )
-                conn.commit()
+                for spec in specialties:
+                    cursor.execute("""
+                        INSERT INTO Staffspeciality (user_id, speciality_name)
+                        VALUES (%s, %s)
+                    """, (new_user_id, spec))
 
-            message = f"Account created successfully! (User ID: {user_id})"
-        except mariadb.Error as e:
-            error = f"Database error: {e}"
+            conn.commit()
+            flash("Account created successfully!", "success")
 
-    # Get all ticket types for the form
-    cursor.execute("SELECT * FROM TicketType")
-    ticket_types = cursor.fetchall()
+        except Exception as e:
+            conn.rollback()
+            flash(f"Error creating account: {str(e)}", "error")
 
-    return render_template("admin_account_create.html", ticket_types=ticket_types, message=message, error=error)
+        finally:
+            cursor.close()
+            conn.close()
 
+        return redirect(url_for("admin.create_account"))
+
+    return render_template("admin_account_create.html")
 
 @admin_bp.route('/history', methods=["GET"])
 def transaction_history():
@@ -327,6 +332,175 @@ def account_detail(user_id):
     except Exception as e:
         flash(f"Error accessing account: {str(e)}", "error")
         return redirect(url_for('admin.view_accounts'))
+    finally:
+        cursor.close()
+        conn.close()
+    
+@admin_bp.route("/main", methods=["GET"])
+def admin_dashboard():
+    if "user_id" not in session or session.get("role") != "Admin":
+        flash("Please log in as an administrator to access this page", "error")
+        return redirect("/login")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    try:
+        # Get ticket statistics
+        cursor.execute("""
+            SELECT 
+                status,
+                COUNT(*) as count
+            FROM Tickets 
+            GROUP BY status
+        """)
+        ticket_stats = cursor.fetchall()
+        
+        # Convert to a dictionary for easier access
+        ticket_counts = {stat['status']: stat['count'] for stat in ticket_stats}
+        
+        # Get user role statistics
+        cursor.execute("""
+            SELECT 
+                role,
+                COUNT(*) as count
+            FROM Accounts 
+            WHERE active_status = TRUE
+            GROUP BY role
+        """)
+        role_stats = cursor.fetchall()
+        
+        # Get all accounts for the table
+        cursor.execute("""
+            SELECT 
+                user_id, username, role, active_status, email, contact_number
+            FROM Accounts
+            ORDER BY user_id
+        """)
+        accounts = cursor.fetchall()
+        
+        return render_template(
+            "admin_main.html",
+            ticket_counts=ticket_counts,
+            role_counts=role_stats,
+            accounts=accounts
+        )
+        
+    except Exception as e:
+        flash(f"Error loading dashboard: {str(e)}", "error")
+        return render_template("admin_main.html", 
+                              ticket_counts={}, 
+                              role_counts=[], 
+                              accounts=[])
+    finally:
+        cursor.close()
+        conn.close()
+
+@admin_bp.route('/account/<user_id>', methods=['GET', 'POST'])
+def account_detail(user_id):
+    # Your existing code, but make sure it renders the correct template
+    return render_template("admin_account_detail.html", 
+                         account=account, 
+                         specialties=specialties, 
+                         ticket_types=ticket_types)
+@admin_bp.route("/api/get_account/<user_id>")
+def get_account(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute("SELECT * FROM Accounts WHERE user_id = %s", (user_id,))
+    account = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return jsonify(account)
+
+@admin_bp.route("/api/get_account/<user_id>", methods=["GET"])
+def get_account(user_id):
+    if "user_id" not in session or session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        cursor.execute("""
+            SELECT user_id, username, email, contact_number, role, account_status
+            FROM Accounts
+            WHERE user_id = %s
+        """, (user_id,))
+        account = cursor.fetchone()
+
+        if not account:
+            return jsonify({"error": "Account not found"}), 404
+
+        # Always send details
+        response = {
+            "user_id": account["user_id"],
+            "username": account["username"],
+            "email": account["email"],
+            "contact_number": account["contact_number"],
+            "role": account["role"],
+            "account_status": account["account_status"],
+            "specialties": []
+        }
+
+        # Only add specialties if Staff
+        if account["role"] == "Staff":
+            cursor.execute("SELECT speciality_name FROM Staffspeciality WHERE user_id = %s", (user_id,))
+            specs = [row["speciality_name"] for row in cursor.fetchall()]
+            response["specialties"] = specs
+
+        return jsonify(response), 200
+
+    finally:
+        cursor.close()
+        conn.close()
+
+# ✅ Update account details
+@admin_bp.route("/api/update_account/<user_id>", methods=["POST"])
+def update_account(user_id):
+    if "user_id" not in session or session.get("role") != "Admin":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.json  # Frontend will send JSON
+
+    username = data.get("username")
+    email = data.get("email")
+    contact_number = data.get("contact_number")
+    role = data.get("role")
+    account_status = int(data.get("account_status", 1))
+    specialties = data.get("specialties", [])
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Update the main account fields
+        cursor.execute("""
+            UPDATE Accounts
+            SET username = %s,
+                email = %s,
+                contact_number = %s,
+                role = %s,
+                account_status = %s
+            WHERE user_id = %s
+        """, (username, email, contact_number, role, account_status, user_id))
+
+        # Handle specialties only if role = Staff
+        cursor.execute("DELETE FROM Staffspeciality WHERE user_id = %s", (user_id,))
+        if role == "Staff" and specialties:
+            for spec in specialties:
+                cursor.execute("""
+                    INSERT INTO Staffspeciality (user_id, speciality_name)
+                    VALUES (%s, %s)
+                """, (user_id, spec))
+
+        conn.commit()
+        return jsonify({"message": "Account updated successfully"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
     finally:
         cursor.close()
         conn.close()
