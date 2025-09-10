@@ -1,5 +1,4 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify
-import mariadb
 import os
 from dotenv import load_dotenv
 from datetime import datetime

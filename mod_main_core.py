@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify,send_file
 from dotenv import load_dotenv
-import mariadb
 import psycopg2
 import psycopg2.extras
 import supabase
@@ -58,103 +57,6 @@ from flask import jsonify  # Add this import at the top
 
 # Add these API endpoints to mod_main_core.py
 
-@mod_bp.route('/api/tickets/<ticket_id>', methods=['GET'])
-def api_get_ticket(ticket_id):
-    if "user_id" not in session or session.get("role") != "Mod":
-        return jsonify({"message": "Unauthorized"}), 401
-    
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    try:
-        cursor.execute("""
-            SELECT t.*, 
-                   ra.username AS customer_name,
-                   ra.email AS customer_email,
-                   ra.contact_number AS customer_phone,
-                   aa.username AS current_staff_username,
-                   aa.user_id AS current_staff_id,
-                   aa.email AS current_staff_contact
-            FROM Tickets t
-            JOIN Accounts ra ON t.reporter_id = ra.user_id
-            LEFT JOIN Accounts aa ON t.assigner_id = aa.user_id
-            WHERE t.ticket_id = %s
-        """, (ticket_id,))
-        ticket = cursor.fetchone()
-
-        if not ticket:
-            return jsonify({"message": "Ticket not found"}), 404
-
-        # Format the response
-        ticket_data = {
-            "id": ticket["ticket_id"],
-            "title": ticket["title"],
-            "description": ticket["description"],
-            "status": ticket["status"],
-            "type": ticket["type"],
-            "urgency": ticket["urgency"],
-            "created_date": ticket["create_date"].isoformat() if ticket["create_date"] else None,
-            "last_update": ticket["last_update"].isoformat() if ticket["last_update"] else None,
-            "customer_name": ticket["customer_name"],
-            "customer_email": ticket["customer_email"],
-            "customer_phone": ticket["customer_phone"],
-            "current_staff_username": ticket["current_staff_username"],
-            "current_staff_id": ticket["current_staff_id"],
-            "current_staff_contact": ticket["current_staff_contact"],
-            "client_messages": ticket.get("client_message", ""),
-            "dev_messages": ticket.get("dev_message", "")
-        }
-
-        return jsonify(ticket_data)
-        
-    except Exception as e:
-        return jsonify({"message": f"Error fetching ticket: {str(e)}"}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
-@mod_bp.route('/api/tickets/<ticket_id>/update', methods=['POST'])
-def api_update_ticket(ticket_id):
-    if "user_id" not in session or session.get("role") != "Mod":
-        return jsonify({"message": "Unauthorized"}), 401
-
-    data = request.get_json()
-    if not data:
-        return jsonify({"message": "No data provided"}), 400
-
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    try:
-        now = datetime.now()
-        client_message = data.get('client_message', '')
-        dev_message = data.get('dev_message', '')
-
-        cursor.execute("""
-            UPDATE Tickets 
-            SET client_message = %s, dev_message = %s, last_update = %s 
-            WHERE ticket_id = %s
-            RETURNING *
-        """, (client_message, dev_message, now, ticket_id))
-
-        if cursor.rowcount == 0:
-            return jsonify({"message": "Ticket not found"}), 404
-
-        # Log the transaction
-        cursor.execute("""
-            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'message_update', session["user_id"], now, 'Moderator updated ticket messages'))
-
-        conn.commit()
-        return jsonify({"message": "Updates saved successfully!"}), 200
-
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"message": f"Update failed: {str(e)}"}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 @mod_bp.route('/api/tickets/<ticket_id>/assign', methods=['POST'])
 def api_assign_ticket(ticket_id):

@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify
 from dotenv import load_dotenv
-import mariadb
 import random
 import bcrypt
 import psycopg2
@@ -396,22 +395,8 @@ def admin_dashboard():
         cursor.close()
         conn.close()
 
-@admin_bp.route('/account/<user_id>', methods=['GET', 'POST'])
-def account_detail(user_id):
-    # Your existing code, but make sure it renders the correct template
-    return render_template("admin_account_detail.html", 
-                         account=account, 
-                         specialties=specialties, 
-                         ticket_types=ticket_types)
-@admin_bp.route("/api/get_account/<user_id>")
-def get_account(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cursor.execute("SELECT * FROM Accounts WHERE user_id = %s", (user_id,))
-    account = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    return jsonify(account)
+
+
 
 @admin_bp.route("/api/get_account/<user_id>", methods=["GET"])
 def get_account(user_id):

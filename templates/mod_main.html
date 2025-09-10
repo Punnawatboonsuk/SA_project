@@ -96,6 +96,35 @@
         .settings-icon {
             font-size: 16px;
         }
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 220px; /* Positioned to the left of settings button */
+            background: rgba(231, 76, 60, 0.2);
+            color: white;
+            border: 2px solid rgba(231, 76, 60, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(231, 76, 60, 0.3);
+            border-color: rgba(231, 76, 60, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.2);
+        }
+
+        .logout-icon {
+            font-size: 16px;
+        }
 
         .filters-section {
             padding: 30px;
@@ -394,6 +423,10 @@
             <button id="settingsBtn" class="settings-btn">
                 <span class="settings-icon">⚙️</span>
                 Account Settings
+            </button>
+             <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                <span class="logout-icon">🚪</span>
+                Logout
             </button>
             <h1>Ticket Dashboard</h1>
             <p>View and manage all tickets in the system</p>

@@ -169,14 +169,14 @@
 
         <form id="loginForm" action="/api/login" method="POST">
             <div class="form-group">
-                <label for="username">Username or Email</label>
+                <label for="username">User id</label>
                 <input 
                     type="text" 
-                    id="username" 
-                    name="username" 
+                    id="user_id" 
+                    name="user_id" 
                     required 
-                    autocomplete="username"
-                    placeholder="Enter your username or email"
+                    autocomplete="user_id"
+                    placeholder="Enter your user id"
                 >
             </div>
 
@@ -229,9 +229,8 @@
                 
                 const data = await response.json();
                 
-                if (response.ok) {
-                    // Success - redirect to dashboard
-                    window.location.href = '/dashboard';
+               if (response.ok) {
+                    window.location.href = data.redirect;
                 } else {
                     // Show error message
                     errorMessage.textContent = data.message || 'Login failed. Please try again.';

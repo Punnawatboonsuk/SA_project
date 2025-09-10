@@ -84,6 +84,38 @@
             justify-content: center;
         }
 
+        .header-right {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .logout-btn {
+            background: rgba(231, 76, 60, 0.2);
+            color: white;
+            border: 2px solid rgba(231, 76, 60, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logout-btn:hover {
+            background: rgba(231, 76, 60, 0.3);
+            border-color: rgba(231, 76, 60, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.2);
+        }
+
         .settings-btn {
             background: rgba(255, 255, 255, 0.2);
             color: white;
@@ -420,7 +452,18 @@
                 flex-wrap: wrap;
             }
 
+            .header-right {
+                position: static;
+                justify-content: center;
+                margin-bottom: 15px;
+            }
+
             .nav-btn {
+                font-size: 12px;
+                padding: 8px 16px;
+            }
+
+            .logout-btn {
                 font-size: 12px;
                 padding: 8px 16px;
             }
@@ -455,16 +498,24 @@
 </head>
 <body>
     <div class="container">
-        <div class="header-nav">
-    <a href="{{ url_for('admin.create_account') }}" class="nav-btn">
-        <span>👤</span>
-        Account Create
-    </a>
-    <a href="{{ url_for('admin.transaction_history') }}" class="nav-btn">
-        <span>📊</span>
-        Transaction
-    </a>
-</div>
+        <div class="header">
+            <div class="header-nav">
+                <a href="account_create.html" class="nav-btn">
+                    <span>👤</span>
+                    Account Create
+                </a>
+                <a href="transaction_history.html" class="nav-btn">
+                    <span>📊</span>
+                    Transaction
+                </a>
+            </div>
+            
+            <div class="header-right">
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    <span>🚪</span>
+                    Logout
+                </a>
+            </div>
             
             <h1>Administrator Dashboard</h1>
             <p>IT Ticketing System Management Console</p>
@@ -478,44 +529,58 @@
 
         <div class="dashboard-content">
             Ticket Statistics 
-            <div class="stats-grid">
-    <div class="stat-card tickets">
-        <div class="stat-number">{{ ticket_counts.get('Open', 0) }}</div>
-        <div class="stat-label">Open Tickets</div>
-    </div>
-    <div class="stat-card tickets">
-        <div class="stat-number">{{ ticket_counts.get('Assign-working_on', 0) }}</div>
-        <div class="stat-label">In Progress</div>
-    </div>
-    <div class="stat-card tickets">
-        <div class="stat-number">{{ ticket_counts.get('Pending', 0) }}</div>
-        <div class="stat-label">Pending</div>
-    </div>
-    <div class="stat-card tickets">
-        <div class="stat-number">{{ ticket_counts.get('On going to upper level', 0) + ticket_counts.get('Out of service / outsource requirement', 0) }}</div>
-        <div class="stat-label">On Hold</div>
-    </div>
-    <div class="stat-card tickets">
-        <div class="stat-number">{{ ticket_counts.get('Resolved', 0) }}</div>
-        <div class="stat-label">Resolved</div>
-    </div>
-    <div class="stat-card tickets">
-        <div class="stat-number">{{ ticket_counts.get('Closed', 0) }}</div>
-        <div class="stat-label">Closed</div>
-    </div>
-</div>
+            <div class="stats-section">
+                <h2 class="section-title">Ticket Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card tickets">
+                        <div class="stat-number">45</div>
+                        <div class="stat-label">Open Tickets</div>
+                    </div>
+                    <div class="stat-card tickets">
+                        <div class="stat-number">23</div>
+                        <div class="stat-label">In Progress</div>
+                    </div>
+                    <div class="stat-card tickets">
+                        <div class="stat-number">12</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-card tickets">
+                        <div class="stat-number">8</div>
+                        <div class="stat-label">On Hold</div>
+                    </div>
+                    <div class="stat-card tickets">
+                        <div class="stat-number">156</div>
+                        <div class="stat-label">Resolved</div>
+                    </div>
+                    <div class="stat-card tickets">
+                        <div class="stat-number">134</div>
+                        <div class="stat-label">Closed</div>
+                    </div>
+                </div>
+            </div>
 
             Role Statistics 
             <div class="stats-section">
                 <h2 class="section-title">User Role Statistics</h2>
                 <div class="stats-grid">
-    {% for role_stat in role_counts %}
-    <div class="stat-card roles">
-        <div class="stat-number">{{ role_stat.count }}</div>
-        <div class="stat-label">{{ role_stat.role }}s</div>
-    </div>
-    {% endfor %}
-</div>
+                    <div class="stat-card roles">
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">Administrators</div>
+                    </div>
+                    <div class="stat-card roles">
+                        <div class="stat-number">8</div>
+                        <div class="stat-label">Moderators</div>
+                    </div>
+                    <div class="stat-card roles">
+                        <div class="stat-number">25</div>
+                        <div class="stat-label">Staff Members</div>
+                    </div>
+                    <div class="stat-card roles">
+                        <div class="stat-number">142</div>
+                        <div class="stat-label">Users</div>
+                    </div>
+                </div>
+            </div>
 
             Accounts Management 
             <div class="accounts-section">
@@ -563,9 +628,8 @@
                                 <th>Email</th>
                                 <th>Contact Number</th>
                             </tr>
-                        </thead>
-                        <tbody id="accountsTableBody">
-    {% for account in accounts %}
+                         <tbody id="accountsTableBody">
+                              {% for account in accounts %}
     <tr onclick="editAccount('{{ account.user_id }}')">
         <td>{{ account.user_id }}</td>
         <td>{{ account.username }}</td>
@@ -584,7 +648,6 @@
     </tr>
     {% endfor %}
 </tbody>
-                        
                     </table>
                     <div id="noResults" class="no-results" style="display: none;">
                         No accounts found matching the current filters.
@@ -630,22 +693,22 @@
     <script>
         // Store original table data for filtering
         let originalTableData = [];
-
-// Initialize the page
-document.addEventListener('DOMContentLoaded', function() {
-    // Store original table data from server-rendered content
-    const tableBody = document.getElementById('accountsTableBody');
-    originalTableData = Array.from(tableBody.querySelectorAll('tr')).map(row => ({
-        element: row.cloneNode(true),
-        data: {
-            userId: row.cells[0].textContent.trim(),
-            username: row.cells[1].textContent.trim(),
-            role: row.cells[2].textContent.trim(),
-            status: row.cells[3].textContent.trim(),
-            email: row.cells[4].textContent.trim(),
-            contact: row.cells[5].textContent.trim()
-        }
-    }));
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Store original table data
+            const tableBody = document.getElementById('accountsTableBody');
+            originalTableData = Array.from(tableBody.querySelectorAll('tr')).map(row => ({
+                element: row.cloneNode(true),
+                data: {
+                    userId: row.cells[0].textContent.trim(),
+                    username: row.cells[1].textContent.trim(),
+                    role: row.cells[2].textContent.trim(),
+                    status: row.cells[3].textContent.trim(),
+                    email: row.cells[4].textContent.trim(),
+                    contact: row.cells[5].textContent.trim()
+                }
+            }));
 
             // Add event listeners for filters
             document.getElementById('filterUserId').addEventListener('input', filterTable);
@@ -725,8 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Edit account function - redirects to admin_account_edit.html
         function editAccount(userId) {
             console.log('[v0] Redirecting to edit account:', userId);
-            window.location.href = `admin_accounting_page.html?userId=${encodeURIComponent(userId)}`;
-
+            window.location.href = `admin_account_edit.html?userId=${encodeURIComponent(userId)}`;
         }
 
         // Show/hide modal logic

@@ -97,6 +97,36 @@
             font-size: 16px;
         }
 
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 220px; /* Positioned to the left of settings button */
+            background: rgba(231, 76, 60, 0.2);
+            color: white;
+            border: 2px solid rgba(231, 76, 60, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(231, 76, 60, 0.3);
+            border-color: rgba(231, 76, 60, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.2);
+        }
+
+        .logout-icon {
+            font-size: 16px;
+        }
+
         .filters-section {
             padding: 30px;
             background: #f8f9fa;
@@ -384,6 +414,12 @@
                 margin-bottom: 10px;
                 align-self: flex-end;
             }
+
+            .logout-btn {
+                position: static;
+                margin-bottom: 10px;
+                align-self: flex-end;
+            }
         }
     </style>
 </head>
@@ -394,6 +430,10 @@
             <button id="settingsBtn" class="settings-btn">
                 <span class="settings-icon">⚙️</span>
                 Account Settings
+            </button>
+            <button class="logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">
+                <span class="logout-icon">🚪</span>
+                Logout
             </button>
             <h1>Ticket Dashboard</h1>
             <p>View and manage all tickets in the system</p>
@@ -508,19 +548,7 @@
         </div>
     </div>
 
-    <div id="accountModal" style="
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.5);
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        backdrop-filter: blur(5px);
-    ">
+    <div id="accountModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px);">
         <div class="modal-content">
             <button id="closeModal" class="close-btn">&times;</button>
             <h3 class="modal-header">Account Settings</h3>
@@ -596,41 +624,41 @@
         }
 
         function renderTickets() {
-    const tbody = document.getElementById('ticketsTableBody');
+            const tbody = document.getElementById('ticketsTableBody');
     
-    if (filteredTickets.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="no-results">
-                    No tickets found matching the current filters.
-                </td>
-            </tr>
-        `;
-        return;
-    }
+            if (filteredTickets.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="no-results">
+                            No tickets found matching the current filters.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
 
-    tbody.innerHTML = filteredTickets.map(ticket => `
-        <tr onclick="window.location.href='/user/ticket/${ticket.ticket_id}'" style="cursor:pointer;">
-            <td><strong>${ticket.ticket_id}</strong></td>
-            <td>${ticket.title}</td>
-            <td>
-                <span class="status-badge ${getStatusClass(ticket.status)}">
-                    ${formatStatus(ticket.status)}
-                </span>
-            </td>
-            <td>
-                <span class="urgency-badge ${getUrgencyClass(ticket.urgency)}">
-                    ${ticket.urgency}
-                </span>
-            </td>
-            <td>
-                <span class="type-badge">${ticket.type}</span>
-            </td>
-            <td>${new Date(ticket.create_date).toLocaleDateString()}</td>
-            <td>${new Date(ticket.last_update).toLocaleDateString()}</td>
-        </tr>
-    `).join('');
-}
+            tbody.innerHTML = filteredTickets.map(ticket => `
+                <tr onclick="window.location.href='/user/ticket/${ticket.ticket_id}'" style="cursor:pointer;">
+                    <td><strong>${ticket.ticket_id}</strong></td>
+                    <td>${ticket.title}</td>
+                    <td>
+                        <span class="status-badge ${getStatusClass(ticket.status)}">
+                            ${formatStatus(ticket.status)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="urgency-badge ${getUrgencyClass(ticket.urgency)}">
+                            ${ticket.urgency}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="type-badge">${ticket.type}</span>
+                    </td>
+                    <td>${new Date(ticket.create_date).toLocaleDateString()}</td>
+                    <td>${new Date(ticket.last_update).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
 
         function applyFilters() {
             const ticketIdFilter = document.getElementById('ticketIdFilter').value.toLowerCase();
@@ -720,8 +748,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-

@@ -1,9 +1,8 @@
 from flask import Flask, render_template, request, redirect, session, jsonify, url_for
-import bcrypt
-import mariadb
+import ripbcrypt
+import supabase
 import os
 from dotenv import load_dotenv
-from account_setting_core import account_setting_bp
 from user_main_core import user_bp
 from staff_main_core import staff_bp  # Changed variable name for consistency
 from admin_main_core import admin_bp  # You'll need to create this
@@ -12,12 +11,8 @@ import psycopg2
 import psycopg2.extras
 # Load environment variables
 load_dotenv()
-
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
-
 # Register blueprints with appropriate URL prefixes
-app.register_blueprint(account_setting_bp, url_prefix='/account')
 app.register_blueprint(user_bp, url_prefix='/user')
 app.register_blueprint(staff_bp, url_prefix='/staff')
 app.register_blueprint(admin_bp, url_prefix='/admin')  # Add this blueprint
@@ -37,13 +32,16 @@ def get_db_connection():
 @app.route('/')
 def index():
     return redirect('/login')
+@app.route('/login')
+def login_page():
+    return render_template("login.html")
 
 # Login route (GET/POST)
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.get_json()
-    user_id = data.get('username')  # Map frontend's 'username' to backend's 'user_id'
-    password = data.get('password').encode('utf-8')
+    user_id = data.get('user_id') 
+    password = data.get('password')
     
     if not user_id or not password:
         return jsonify({"message": "User ID and password are required."}), 400
@@ -58,9 +56,9 @@ def api_login():
         if user:
             if user['active_status'] == 0:
                 return jsonify({"message": "This account is banned."}), 403
-            elif bcrypt.checkpw(password, user['hashed_password'].encode('utf-8')):
+            elif ripbcrypt.checkpw(password, user['hashed_password']):
                 # Update password hash
-                new_hash = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
+                new_hash = ripbcrypt.hashpw(password, ripbcrypt.gensalt())
                 cursor.execute("UPDATE Accounts SET hashed_password = %s WHERE user_id = %s", (new_hash, user_id))
                 conn.commit()
 
@@ -83,13 +81,13 @@ def api_login():
 
 def get_redirect_url(role):
     if role == "Admin":
-        return url_for('admin.main')
+        return url_for('admin.admin_dashboard')
     elif role == "Staff":
-        return url_for('staff.main')
+        return url_for('staff.staff_main')
     elif role == "Mod":
-        return url_for('mod.main')
+        return url_for('mod.mod_main')
     else:
-        return url_for('user.main')
+        return url_for('user.user_dashboard')
 
 # API for dynamic dropdown (AJAX fetch)
 @app.route('/api/accounts')
@@ -102,7 +100,7 @@ def api_accounts():
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
     try:
-        cursor.execute("SELECT user_id, username FROM Accounts WHERE username = %s AND is_banned = 0", (username,))
+        cursor.execute("SELECT user_id, username FROM Accounts WHERE username = %s AND account_status = 1", (username,))
         accounts = cursor.fetchall()
         return jsonify(accounts)
     finally:

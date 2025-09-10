@@ -2,9 +2,8 @@ from flask import Blueprint, render_template, session, redirect, request, url_fo
 import os
 import random
 from datetime import datetime
-from app import logout
 from dotenv import load_dotenv
-import bcrypt
+import ripbcrypt
 import psycopg2
 import psycopg2.extras
 from supabase import create_client
@@ -53,7 +52,7 @@ def user_dashboard():
         return render_template(
             "user_main.html",
             tickets=tickets,
-            username=session.get('username')
+            user_id=session.get('user_id')
         )
     finally:
         cursor.close()
@@ -591,7 +590,7 @@ def update_account():
             return redirect(url_for('user.user_dashboard'))
         
         # Verify current password with bcrypt
-        if not bcrypt.checkpw(current_password, user['password_hash'].encode('utf-8')):
+        if not ripbcrypt.checkpw(current_password, user['password_hash']):
             flash("Current password is incorrect", "error")
             return redirect(url_for('user.user_dashboard'))
         
@@ -604,7 +603,7 @@ def update_account():
         
         # Update password if provided
         if new_password:
-            hashed_pw = bcrypt.hashpw(new_password, bcrypt.gensalt()).decode('utf-8')
+            hashed_pw = ripbcrypt.hashpw(new_password, ripbcrypt.gensalt())
             cursor.execute("UPDATE Accounts SET password_hash = %s WHERE user_id = %s", 
                           (hashed_pw, user_id))
             flash("Password updated successfully", "success")
