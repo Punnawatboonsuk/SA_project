@@ -17,15 +17,7 @@ user_bp = Blueprint('user', __name__, url_prefix='/user')
 
 # Database connection function
 def get_db_connection():
-    conn = psycopg2.connect(
-        host=os.getenv("SUPABASE_HOST"),
-        database="postgres",        # Supabase default DB
-        user="postgres",            # Supabase default user
-        password=os.getenv("SUPABASE_DB_PASSWORD"),  # keep password safe
-        port="5432"
-    )
-    return conn
-
+    return psycopg2.connect(os.getenv("DATABASE_URL"), sslmode="require")
 # User Dashboard
 @user_bp.route('/main', methods=["GET"])
 def user_dashboard():
@@ -41,11 +33,11 @@ def user_dashboard():
         cursor.execute("""
             SELECT 
                 t.ticket_id, t.title, t.description, t.status, 
-                t.create_date, t.last_update, 
+                t.created_date, t.last_update, 
                 t.type, t.urgency
-            FROM Tickets t
+            FROM tickets t
             WHERE t.reporter_id = %s
-            ORDER BY t.create_date DESC
+            ORDER BY t.created_date DESC
         """, (user_id,))
         tickets = cursor.fetchall()
 
@@ -83,9 +75,9 @@ def api_get_ticket(ticket_id):
                    aa.username AS assigner_username,
                    aa.email AS staff_email,
                    aa.contact_number AS staff_number
-            FROM Tickets t
-            JOIN Accounts ra ON t.reporter_id = ra.user_id
-            LEFT JOIN Accounts aa ON t.assigner_id = aa.user_id
+            FROM tickets t
+            JOIN "Accounts" ra ON t.reporter_id = ra.user_id
+            LEFT JOIN "Accounts" aa ON t.assigner_id = aa.user_id
             WHERE t.ticket_id = %s AND t.reporter_id = %s
         """, (ticket_id, user_id))
         ticket = cursor.fetchone()
@@ -133,7 +125,7 @@ def update_ticket(ticket_id):
         # Update description
         if new_description:
             cursor.execute("""
-                UPDATE Tickets
+                UPDATE tickets
                 SET description = %s, last_update = %s
                 WHERE ticket_id = %s
             """, (new_description, now, ticket_id))
@@ -189,7 +181,7 @@ def reject_ticket(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        cursor.execute("SELECT status FROM Tickets WHERE ticket_id = %s", (ticket_id,))
+        cursor.execute("SELECT status FROM tickets WHERE ticket_id = %s", (ticket_id,))
         ticket = cursor.fetchone()
 
         if not ticket:
@@ -202,13 +194,13 @@ def reject_ticket(ticket_id):
 
         # Reset ticket status and assigner
         cursor.execute("""
-            UPDATE Tickets
+            UPDATE tickets
             SET status = 'Open', assigner_id = NULL, last_update = %s
             WHERE ticket_id = %s
         """, (now, ticket_id))
 
         cursor.execute("""
-            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_time, detail)
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
         """, (ticket_id, 'ticket rejected', session["user_id"], now, 'Ticket rejected by user'))
 
@@ -244,9 +236,9 @@ def view_ticket(ticket_id):
             SELECT t.*, t.type, t.urgency,
                    ra.username AS reporter_username,
                    aa.username AS assigner_username
-            FROM Tickets t
-            JOIN Accounts ra ON t.reporter_id = ra.user_id
-            LEFT JOIN Accounts aa ON t.assigner_id = aa.user_id
+            FROM tickets t
+            JOIN "Accounts" ra ON t.reporter_id = ra.user_id
+            LEFT JOIN "Accounts" aa ON t.assigner_id = aa.user_id
             WHERE t.ticket_id = %s AND t.reporter_id = %s
         """, (ticket_id, user_id))
         ticket = cursor.fetchone()
@@ -269,14 +261,14 @@ def view_ticket(ticket_id):
 
                     # Update ticket
                     cursor.execute("""
-                        UPDATE Tickets
+                        UPDATE tickets
                         SET description = %s, last_update = %s
                         WHERE ticket_id = %s AND reporter_id = %s
                     """, (new_description, now, ticket_id, user_id))
 
                     # Insert into transaction history
                     cursor.execute("""
-                        INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                        INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
                         VALUES (%s, %s, %s, %s, %s)
                     """, (ticket_id, 'update description', user_id, now, f'Updated description to: "{new_description}"'))
 
@@ -285,14 +277,14 @@ def view_ticket(ticket_id):
                 elif action == 'reject':
                     # Update ticket
                     cursor.execute("""
-                        UPDATE Tickets
+                        UPDATE tickets
                         SET status = 'Open', last_update = %s, assigner_id = NULL
                         WHERE ticket_id = %s AND reporter_id = %s
                     """, (now, ticket_id, user_id))
 
                     # Insert into transaction history
                     cursor.execute("""
-                        INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                        INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
                         VALUES (%s, %s, %s, %s, %s)
                     """, (ticket_id, 'reject', user_id, now, 'Ticket rejected and reopen'))
 
@@ -352,8 +344,8 @@ def create_ticket():
 
                 # Insert ticket
                 cursor.execute("""
-                    INSERT INTO Tickets (ticket_id, title, description, type, urgency,
-                                         reporter_id, assigner_id, status, create_date, last_update,
+                    INSERT INTO tickets (ticket_id, title, description, type, urgency,
+                                         reporter_id, assigner_id, status, created_date, last_update,
                                          client_message, dev_message)
                     VALUES (%s, %s, %s, %s, %s, %s, NULL, 'Open', %s, %s, '', '')
                 """, (ticket_id, title, description, ticket_type, urgency,
@@ -394,7 +386,7 @@ def create_ticket():
 
                 # Log transaction
                 cursor.execute("""
-                    INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+                    INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
                     VALUES (%s, %s, %s, %s, %s)
                 """, (ticket_id, 'ticket created', reporter_id, now, 'Ticket created with attachments'))
 
@@ -582,7 +574,7 @@ def update_account():
     
     try:
         # Fetch current user info
-        cursor.execute("SELECT username, password_hash FROM Accounts WHERE user_id = %s", (user_id,))
+        cursor.execute('SELECT username, password_hash FROM "Accounts" WHERE user_id = %s', (user_id,))
         user = cursor.fetchone()
         
         if not user:
@@ -604,7 +596,7 @@ def update_account():
         # Update password if provided
         if new_password:
             hashed_pw = ripbcrypt.hashpw(new_password, ripbcrypt.gensalt())
-            cursor.execute("UPDATE Accounts SET password_hash = %s WHERE user_id = %s", 
+            cursor.execute('UPDATE "Accounts" SET password_hash = %s WHERE user_id = %s', 
                           (hashed_pw, user_id))
             flash("Password updated successfully", "success")
         

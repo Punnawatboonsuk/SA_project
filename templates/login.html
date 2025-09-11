@@ -167,9 +167,9 @@
             Invalid credentials. Please try again.
         </div>
 
-        <form id="loginForm" action="/api/login" method="POST">
+        <form id="loginForm">
             <div class="form-group">
-                <label for="username">User id</label>
+                <label for="user_d">User id</label>
                 <input 
                     type="text" 
                     id="user_id" 
@@ -222,7 +222,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        username: formData.get('username'),
+                        user_id: formData.get('user_id'),
                         password: formData.get('password')
                     })
                 });

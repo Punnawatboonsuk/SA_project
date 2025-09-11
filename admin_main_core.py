@@ -6,21 +6,16 @@ import random
 import bcrypt
 import psycopg2
 import psycopg2.extras
+from supabase import create_client
 load_dotenv()
-
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 def get_db_connection():
-    conn = psycopg2.connect(
-        host=os.getenv("SUPABASE_HOST"),
-        database="postgres",        # Supabase default DB
-        user="postgres",            # Supabase default user
-        password=os.getenv("SUPABASE_DB_PASSWORD"),  # keep password safe
-        port="5432"
-    )
-    return conn
-
+   return psycopg2.connect(os.getenv("DATABASE_URL"), sslmode="require")
 # Database connection
 
 

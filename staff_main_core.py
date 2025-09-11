@@ -11,21 +11,17 @@ import supabase
 import zipfile
 import io
 from flask import send_file, redirect
+from supabase import create_client
 
 load_dotenv()
-
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 staff_bp = Blueprint('staff', __name__, url_prefix='/staff')
 
 # Database connection function
 def get_db_connection():
-    conn = psycopg2.connect(
-        host=os.getenv("SUPABASE_HOST"),
-        database="postgres",        # Supabase default DB
-        user="postgres",            # Supabase default user
-        password=os.getenv("SUPABASE_DB_PASSWORD"),  # keep password safe
-        port="5432"
-    )
-    return conn
+   return psycopg2.connect(os.getenv("DATABASE_URL"), sslmode="require")
 
 @staff_bp.route("/staff_main", methods=["GET"])
 def staff_main():
