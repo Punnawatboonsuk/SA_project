@@ -7,6 +7,7 @@ import psycopg2.extras
 import supabase
 import zipfile
 import io
+import ripbcrypt
 from supabase import create_client
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -33,10 +34,10 @@ def mod_main():
         cursor.execute("""
             SELECT 
                 t.ticket_id, t.title, t.description, t.status, 
-                t.create_date, t.last_update, 
+                t.created_date, t.last_update, 
                 t.type, t.urgency
-            FROM Tickets t
-            ORDER BY t.create_date DESC
+            FROM tickets t
+            ORDER BY t.created_date DESC
         """)
         tickets = cursor.fetchall()
 
@@ -78,7 +79,7 @@ def api_assign_ticket(ticket_id):
             return jsonify({"message": "Invalid staff member"}), 400
 
         cursor.execute("""
-            UPDATE Tickets 
+            UPDATE tickets 
             SET status = 'Assign-in_queue', assigner_id = %s, last_update = %s 
             WHERE ticket_id = %s
             RETURNING *
@@ -90,7 +91,7 @@ def api_assign_ticket(ticket_id):
         # Log the transaction
         details = f'Ticket assigned to staff: {staff["username"]} (ID: {staff_id})'
         cursor.execute("""
-            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
             VALUES (%s, %s, %s, %s, %s)
         """, (ticket_id, 'assign', session["user_id"], now, details))
 
@@ -131,7 +132,7 @@ def api_change_status(ticket_id):
         db_status = status_mapping.get(new_status, new_status)
         
         cursor.execute("""
-            UPDATE Tickets 
+            UPDATE tickets 
             SET status = %s, last_update = %s 
             WHERE ticket_id = %s
             RETURNING *
@@ -142,7 +143,7 @@ def api_change_status(ticket_id):
 
         # Log the transaction
         cursor.execute("""
-            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
             VALUES (%s, %s, %s, %s, %s)
         """, (ticket_id, 'status_change', session["user_id"], now, f'Status changed to {db_status}'))
 
@@ -262,15 +263,15 @@ def api_get_matching_staff(ticket_id):
             SELECT 
                 a.user_id,
                 a.username,
-                s.speciality_name AS specialty,
+                s.speciality,
                 COUNT(t2.ticket_id) AS current_assignment_count
-            FROM Accounts a
-            JOIN StaffSpeciality s ON a.user_id = s.staff_id
-            LEFT JOIN Tickets t2 ON a.user_id = t2.assigner_id 
-                AND t2.status NOT IN ('Closed', 'Resolved')
+            FROM "Accounts" a
+            JOIN staffSpeciality s ON a.user_id = s.staff_id
+            LEFT JOIN tickets t2 ON a.user_id = t2.assigner_id 
+                AND t2.status NOT IN ('Closed')
             WHERE a.role = 'Staff'
-              AND LOWER(s.speciality_name) LIKE LOWER(CONCAT('%%', %s, '%%'))
-            GROUP BY a.user_id, a.username, s.speciality_name
+              AND LOWER(s.speciality) LIKE LOWER(CONCAT('%%', %s, '%%'))
+            GROUP BY a.user_id, a.username, s.speciality
             ORDER BY current_assignment_count ASC
         """, (ticket_type,))
         
@@ -281,12 +282,12 @@ def api_get_matching_staff(ticket_id):
             SELECT 
                 a.user_id,
                 a.username,
-                GROUP_CONCAT(DISTINCT s.speciality_name) AS specialties,
+                GROUP_CONCAT(DISTINCT s.speciality) AS specialties,
                 COUNT(t2.ticket_id) AS current_assignment_count
-            FROM Accounts a
-            LEFT JOIN StaffSpeciality s ON a.user_id = s.staff_id
-            LEFT JOIN Tickets t2 ON a.user_id = t2.assigner_id 
-                AND t2.status NOT IN ('Closed', 'Resolved')
+            FROM "Accounts" a
+            LEFT JOIN staffSpeciality s ON a.user_id = s.staff_id
+            LEFT JOIN tickets t2 ON a.user_id = t2.assigner_id 
+                AND t2.status NOT IN ('Closed')
             WHERE a.role = 'Staff'
             GROUP BY a.user_id, a.username
             ORDER BY current_assignment_count ASC
@@ -344,10 +345,10 @@ def transaction_history():
                 th.action_type,
                 th.action_by,
                 a.username AS action_by_username,
-                th.action_date,
+                th.action_time,
                 th.details
-            FROM Transaction_history th
-            LEFT JOIN Accounts a ON th.action_by = a.user_id
+            FROM transaction_history th
+            LEFT JOIN "Accounts" a ON th.action_by = a.user_id
         """)
         transactions = cursor.fetchall()
         return render_template("mod_history.html",transactions=transactions)
@@ -373,7 +374,7 @@ def api_update_ticket(ticket_id):
 
     try:
         # Get current ticket to preserve unchanged messages
-        cursor.execute("SELECT client_message, dev_message FROM Tickets WHERE ticket_id = %s AND assigner_id = %s", 
+        cursor.execute("SELECT client_message, dev_message FROM tickets WHERE ticket_id = %s AND assigner_id = %s", 
                       (ticket_id, staff_id))
         current_ticket = cursor.fetchone()
         
@@ -386,16 +387,16 @@ def api_update_ticket(ticket_id):
         now = datetime.now()
 
         cursor.execute("""
-            UPDATE Tickets 
+            UPDATE tickets 
             SET client_message = %s, dev_message = %s, last_update = %s 
             WHERE ticket_id = %s AND assigner_id = %s
         """, (client_message, dev_message, now, ticket_id, staff_id))
         
         # Log the transaction
         cursor.execute("""
-            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_date, details)
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'message_update', staff_id, now, 'Staff updated ticket messages'))
+        """, (ticket_id, 'message_update', staff_id, now, 'Mod updated ticket messages'))
 
         conn.commit()
         return jsonify({"message": "Updates saved successfully!"}), 200
@@ -406,3 +407,56 @@ def api_update_ticket(ticket_id):
     finally:
         cursor.close()
         conn.close()
+
+@mod_bp.route('/update_account', methods=['POST'])
+def update_account():
+    if 'user_id' not in session:
+        flash("Please log in to update your account", "error")
+        return redirect('/login')
+    
+    user_id = session.get('user_id')
+    current_password = request.form.get('old_password', '').encode('utf-8')
+    new_username = request.form.get('new_username', '')
+    new_password = request.form.get('new_password', '').encode('utf-8')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    try:
+        # Fetch current user info
+        cursor.execute('SELECT username, password_hash FROM "Accounts" WHERE user_id = %s', (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            flash("User not found", "error")
+            return redirect(url_for('user.user_dashboard'))
+        
+        # Verify current password with bcrypt
+        if not ripbcrypt.checkpw(current_password, user['password_hash']):
+            flash("Current password is incorrect", "error")
+            return redirect(url_for('user.user_dashboard'))
+        
+        # Update username if provided and different
+        if new_username and new_username != user['username']:
+            cursor.execute('UPDATE "Accounts" SET username = %s WHERE user_id = %s', 
+                          (new_username, user_id))
+            session['username'] = new_username
+            flash("Username updated successfully", "success")
+        
+        # Update password if provided
+        if new_password:
+            hashed_pw = ripbcrypt.hashpw(new_password, ripbcrypt.gensalt())
+            cursor.execute('UPDATE "Accounts" SET password_hash = %s WHERE user_id = %s', 
+                          (hashed_pw, user_id))
+            flash("Password updated successfully", "success")
+        
+        conn.commit()
+        
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error updating account: {str(e)}", "error")
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return redirect(url_for('mod.mod_main'))

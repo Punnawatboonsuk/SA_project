@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify
 from dotenv import load_dotenv
 import random
-import bcrypt
+import ripbcrypt
 import psycopg2
 import psycopg2.extras
 from supabase import create_client
@@ -25,7 +25,7 @@ def generate_unique_user_id():
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     while True:
         new_id = str(random.randint(1, 9999999999)).zfill(10)  # e.g., "0000000123"
-        cursor.execute("SELECT user_id FROM Accounts WHERE user_id = %s", (new_id,))
+        cursor.execute('SELECT user_id FROM "Accounts" WHERE user_id = %s', (new_id))
         if not cursor.fetchone():  # If no existing ID
             return new_id
 
@@ -47,7 +47,7 @@ def create_account():
         new_user_id = generate_unique_user_id()
 
         # ✅ Hash password
-        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        password_hash = ripbcrypt.hashpw(password, ripbcrypt.gensalt())
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -55,7 +55,7 @@ def create_account():
         try:
             # Insert into Accounts
             cursor.execute("""
-                INSERT INTO Accounts (user_id, username, password_hash, role, account_status, email, contact_number)
+                INSERT INTO "Accounts" (user_id, username, password_hash, role, account_status, email, contact_number)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (new_user_id, username, password_hash, role, 1, email, contact_number))
 
@@ -63,7 +63,7 @@ def create_account():
             if role == "Staff" and specialties:
                 for spec in specialties:
                     cursor.execute("""
-                        INSERT INTO Staffspeciality (user_id, speciality_name)
+                        INSERT INTO staffspeciality (user_id, speciality_name)
                         VALUES (%s, %s)
                     """, (new_user_id, spec))
 
@@ -104,11 +104,11 @@ def transaction_history():
                 a.username AS action_by_username,
                 th.action_date,
                 th.details
-            FROM Transaction_history th
-            LEFT JOIN Accounts a ON th.action_by = a.user_id
+            FROM transaction_history th
+            LEFT JOIN "Accounts" a ON th.action_by = a.user_id
         """)
         transactions = cursor.fetchall()
-        return render_template("mod_history.html",transactions=transactions)
+        return render_template("admin_transaction_history.html",transactions=transactions)
     except Exception as e:
         flash(f"Error retrieving transaction history: {str(e)}", "error")
         return render_template("admin_transaction_history.html", transactions=[], error=str(e))
@@ -219,8 +219,8 @@ def account_detail(user_id):
     try:
         # Get account details
         cursor.execute(
-            "SELECT user_id, username, role, active_status, email, contact_number, hashed_password, is_banned "
-            "FROM Accounts WHERE user_id = %s",
+            """SELECT user_id, username, role, active_status, email, contact_number, hashed_password, is_banned 
+            FROM "Accounts" WHERE user_id = %s""",
             (user_id,)
         )
         account = cursor.fetchone()
@@ -234,7 +234,7 @@ def account_detail(user_id):
         if account['role'] == 'Staff':
             cursor.execute("""
                 SELECT tt.type_id, tt.type_name 
-                FROM StaffSpeciality ss
+                FROM staffSpeciality ss
                 JOIN TicketType tt ON ss.type_id = tt.type_id
                 WHERE ss.staff_id = %s
             """, (user_id,))
@@ -281,7 +281,7 @@ def account_detail(user_id):
                     params.append(new_is_banned)
 
                 if new_password:  # only update if provided
-                    hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                    hashed_password = ripbcrypt.hashpw(new_password, ripbcrypt.gensalt())
                     updates.append("hashed_password = %s")
                     params.append(hashed_password)
 
@@ -345,7 +345,7 @@ def admin_dashboard():
             SELECT 
                 status,
                 COUNT(*) as count
-            FROM Tickets 
+            FROM tickets 
             GROUP BY status
         """)
         ticket_stats = cursor.fetchall()
@@ -358,8 +358,7 @@ def admin_dashboard():
             SELECT 
                 role,
                 COUNT(*) as count
-            FROM Accounts 
-            WHERE active_status = TRUE
+            FROM "Accounts" 
             GROUP BY role
         """)
         role_stats = cursor.fetchall()
@@ -367,8 +366,8 @@ def admin_dashboard():
         # Get all accounts for the table
         cursor.execute("""
             SELECT 
-                user_id, username, role, active_status, email, contact_number
-            FROM Accounts
+                user_id, username, role, account_status, email, contact_number
+            FROM "Accounts"
             ORDER BY user_id
         """)
         accounts = cursor.fetchall()
@@ -404,7 +403,7 @@ def get_account(user_id):
     try:
         cursor.execute("""
             SELECT user_id, username, email, contact_number, role, account_status
-            FROM Accounts
+            FROM "Accounts"
             WHERE user_id = %s
         """, (user_id,))
         account = cursor.fetchone()
@@ -425,7 +424,7 @@ def get_account(user_id):
 
         # Only add specialties if Staff
         if account["role"] == "Staff":
-            cursor.execute("SELECT speciality_name FROM Staffspeciality WHERE user_id = %s", (user_id,))
+            cursor.execute("SELECT speciality FROM staffspeciality WHERE user_id = %s", (user_id,))
             specs = [row["speciality_name"] for row in cursor.fetchall()]
             response["specialties"] = specs
 
@@ -456,7 +455,7 @@ def update_account(user_id):
     try:
         # Update the main account fields
         cursor.execute("""
-            UPDATE Accounts
+            UPDATE "Accounts"
             SET username = %s,
                 email = %s,
                 contact_number = %s,
@@ -466,11 +465,11 @@ def update_account(user_id):
         """, (username, email, contact_number, role, account_status, user_id))
 
         # Handle specialties only if role = Staff
-        cursor.execute("DELETE FROM Staffspeciality WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM staffspeciality WHERE user_id = %s", (user_id,))
         if role == "Staff" and specialties:
             for spec in specialties:
                 cursor.execute("""
-                    INSERT INTO Staffspeciality (user_id, speciality_name)
+                    INSERT INTO staffspeciality (user_id, speciality_name)
                     VALUES (%s, %s)
                 """, (user_id, spec))
 
@@ -484,3 +483,56 @@ def update_account(user_id):
     finally:
         cursor.close()
         conn.close()
+
+@admin_bp.route('/update_account', methods=['POST'])
+def update_own_account():
+    if 'user_id' not in session:
+        flash("Please log in to update your account", "error")
+        return redirect('/login')
+    
+    user_id = session.get('user_id')
+    current_password = request.form.get('old_password', '').encode('utf-8')
+    new_username = request.form.get('new_username', '')
+    new_password = request.form.get('new_password', '').encode('utf-8')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    try:
+        # Fetch current user info
+        cursor.execute('SELECT username, password_hash FROM "Accounts" WHERE user_id = %s', (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            flash("User not found", "error")
+            return redirect(url_for('user.user_dashboard'))
+        
+        # Verify current password with bcrypt
+        if not ripbcrypt.checkpw(current_password, user['password_hash']):
+            flash("Current password is incorrect", "error")
+            return redirect(url_for('user.user_dashboard'))
+        
+        # Update username if provided and different
+        if new_username and new_username != user['username']:
+            cursor.execute('UPDATE "Accounts" SET username = %s WHERE user_id = %s', 
+                          (new_username, user_id))
+            session['username'] = new_username
+            flash("Username updated successfully", "success")
+        
+        # Update password if provided
+        if new_password:
+            hashed_pw = ripbcrypt.hashpw(new_password, ripbcrypt.gensalt())
+            cursor.execute('UPDATE "Accounts" SET password_hash = %s WHERE user_id = %s', 
+                          (hashed_pw, user_id))
+            flash("Password updated successfully", "success")
+        
+        conn.commit()
+        
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error updating account: {str(e)}", "error")
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return redirect(url_for('admin.admin_dashboard'))

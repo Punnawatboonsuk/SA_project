@@ -1,28 +1,14 @@
+import dns_patch
 from flask import Flask, render_template, request, redirect, session, jsonify, url_for
 import ripbcrypt
 import supabase
 import os
 from dotenv import load_dotenv
 import socket
-import dns.resolver
 
-def force_custom_dns(hostname):
-    resolver = dns.resolver.Resolver()
-    resolver.nameservers = ["8.8.8.8", "1.1.1.1"]  # Google + Cloudflare DNS
-    answer = resolver.resolve(hostname, "A")[0]
-    return str(answer)
 
-# Override socket.getaddrinfo to use our resolver
-_orig_getaddrinfo = socket.getaddrinfo
 
-def custom_getaddrinfo(host, port, *args, **kwargs):
-    try:
-        ip = force_custom_dns(host)
-        return _orig_getaddrinfo(ip, port, *args, **kwargs)
-    except Exception:
-        return _orig_getaddrinfo(host, port, *args, **kwargs)
-
-socket.getaddrinfo = custom_getaddrinfo
+socket.getaddrinfo = dns_patch.custom_getaddrinfo
 
 from user_main_core import user_bp
 from staff_main_core import staff_bp  # Changed variable name for consistency

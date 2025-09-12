@@ -156,9 +156,9 @@ def update_ticket(ticket_id):
                     """, (ticket_id, filename, mime_type, file_url, now))
 
         cursor.execute("""
-            INSERT INTO Transaction_history (ticket_id, action_type, action_by, action_time, detail)
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'ticket update', session["user_id"], now, 'user update the ticket description/attachment'))
+        """, (ticket_id, 'ticket update', session["user_id"], now, 'user update the ticket attachment'))
 
         conn.commit()
         return jsonify({"message": "Update and attachments saved successfully!"}), 200
@@ -268,7 +268,7 @@ def view_ticket(ticket_id):
 
                     # Insert into transaction history
                     cursor.execute("""
-                        INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
+                        INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, details)
                         VALUES (%s, %s, %s, %s, %s)
                     """, (ticket_id, 'update description', user_id, now, f'Updated description to: "{new_description}"'))
 
@@ -284,7 +284,7 @@ def view_ticket(ticket_id):
 
                     # Insert into transaction history
                     cursor.execute("""
-                        INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
+                        INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, details)
                         VALUES (%s, %s, %s, %s, %s)
                     """, (ticket_id, 'reject', user_id, now, 'Ticket rejected and reopen'))
 
@@ -336,7 +336,7 @@ def create_ticket():
                 # Generate ticket_id
                 while True:
                     ticket_id = str(random.randint(1, 9999999999))
-                    cursor.execute("SELECT ticket_id FROM Tickets WHERE ticket_id = %s", (ticket_id,))
+                    cursor.execute("SELECT ticket_id FROM tickets WHERE ticket_id = %s", (ticket_id,))
                     if not cursor.fetchone():
                         break
 
@@ -388,7 +388,7 @@ def create_ticket():
                 cursor.execute("""
                     INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (ticket_id, 'ticket created', reporter_id, now, 'Ticket created with attachments'))
+                """, (ticket_id, 'ticket created', reporter_id, now, 'Ticket created by user'))
 
                 conn.commit()
 
