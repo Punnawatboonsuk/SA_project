@@ -448,12 +448,12 @@
 
         <div class="ticket-container">
             <div class="ticket-header">
-                <div class="ticket-id">Ticket #<span id="ticketId">12345</span></div>
-                <h2 class="ticket-title" id="ticketTitle">Unable to access company email</h2>
+                <div class="ticket-id">Ticket #<span id="ticketId"></span></div>
+                <h2 class="ticket-title" id="ticketTitle"></h2>
                 <div class="status-badges">
-                    <span class="badge status-open" id="statusBadge">Open</span>
-                    <span class="badge urgency-high" id="urgencyBadge">High Priority</span>
-                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;">Email Issue</span>
+                    <span class="badge status-open" id="statusBadge"></span>
+                    <span class="badge urgency-high" id="urgencyBadge"></span>
+                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;"></span>
                 </div>
             </div>
 
@@ -462,23 +462,23 @@
                     <h3 class="section-title">Ticket Information</h3>
                     <div class="detail-item">
                         <div class="detail-label">Type</div>
-                        <div class="detail-value" id="ticketType">Email Issue</div>
+                        <div class="detail-value" id="ticketType"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Urgency</div>
-                        <div class="detail-value" id="ticketUrgency">High</div>
+                        <div class="detail-value" id="ticketUrgency"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Status</div>
-                        <div class="detail-value" id="ticketStatus">Open</div>
+                        <div class="detail-value" id="ticketStatus"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Created Date</div>
-                        <div class="detail-value" id="createdDate">2024-01-15 09:30 AM</div>
+                        <div class="detail-value" id="createdDate"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Last Update</div>
-                        <div class="detail-value" id="lastUpdate">2024-01-15 02:45 PM</div>
+                        <div class="detail-value" id="lastUpdate"></div>
                     </div>
                 </div>
 
@@ -486,15 +486,15 @@
                     <h3 class="section-title">IT Support Assigned</h3>
                     <div class="detail-item">
                         <div class="detail-label">Name</div>
-                        <div class="detail-value" id="supportName">John Smith</div>
+                        <div class="detail-value" id="supportName"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Email</div>
-                        <div class="detail-value" id="supportEmail">john.smith@company.com</div>
+                        <div class="detail-value" id="supportEmail"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Contact Number</div>
-                        <div class="detail-value" id="supportPhone">+1 (555) 123-4567</div>
+                        <div class="detail-value" id="supportPhone"></div>
                     </div>
                 </div>
             </div>
@@ -502,14 +502,11 @@
             <div class="description-section">
                 <h3 class="section-title">Original Description</h3>
                 <div class="description-box" id="originalDescription">
-                    I am unable to access my company email account since this morning. When I try to log in, I get an error message saying "Authentication failed". I have tried resetting my password but the issue persists. This is affecting my ability to communicate with clients and complete my work tasks.
-                </div>
             </div>
 
             <div class="description-section">
                 <h3 class="section-title">Client Messages</h3>
                 <div class="description-box" id="clientMessages">
-                    Update: I tried accessing email from a different browser but still getting the same error. The issue started after the system maintenance last night. Please help resolve this urgently as I have important client meetings today.
                 </div>
             </div>
 
@@ -592,31 +589,56 @@
         // Get ticket ID from URL parameters
         
         // Get ticket ID from backend (passed as template variable)
-        const ticketId = {{ ticket.ticket_id }};
+        const ticketId = {{ ticket_id }};
 
         let newFiles = [];
         let existingAttachments = [];
+        async function initTicketPage() {
+        const res = await fetch(`/user/api/tickets/${ticketId}`);
+        const ticket = await res.json();
+
+        if (ticket.error) {
+            document.body.innerHTML = `<h3>${ticket.error}</h3>`;
+            return;
+        }
+
+        // Fill labels
+        document.getElementById("ticket-title").innerText = ticket.title;
+        document.getElementById("ticket-status").innerText = ticket.status;
+        document.getElementById("ticket-created").innerText = new Date(ticket.created_date).toLocaleString();
+        document.getElementById("ticket-updated").innerText = new Date(ticket.last_update).toLocaleString();
+
+        // Fill staff info
+        document.getElementById("staff-info").innerHTML = `
+            <p><b>Staff:</b> ${ticket.staff_username || "Unassigned"}</p>
+            <p>Email: ${ticket.staff_email || "-"}</p>
+            <p>Contact: ${ticket.staff_contact || "-"}</p>
+        `;
+
+        // Pre-fill textareas
+        document.getElementById("description-field").value = ticket.description || "";
+        document.getElementById("client-message-field").value = ticket.client_message || "";
+
+        // Attachments
+        const attachmentsDiv = document.getElementById("attachments-list");
+        attachmentsDiv.innerHTML = "";
+        ticket.attachments.forEach(att => {
+            attachmentsDiv.innerHTML += `
+                <p><a href="${att.file_url}" target="_blank">${att.file_name}</a>
+                (Uploaded: ${new Date(att.uploaded_at).toLocaleString()})</p>
+            `;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", initTicketPage);
 
 // Load ticket data when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    loadTicketData();
-    loadAttachments();
+    loadTicketData(); // This will now load both ticket data and attachments
     setupFileUpload();
 });
 
-async function loadAttachments() {
-    try {
-        const response = await fetch(`/user/api/tickets/${ticketId}/attachments`);
-        if (response.ok) {
-            existingAttachments = await response.json();
-            displayAttachments();
-        } else {
-            console.error('Failed to load attachments');
-        }
-    } catch (error) {
-        console.error('Error loading attachments:', error);
-    }
-}
+
 
 function displayAttachments() {
     const tableBody = document.getElementById('attachmentsTableBody');
@@ -725,8 +747,12 @@ document.getElementById('downloadAllBtn').addEventListener('click', async functi
         return;
     }
     
+    const downloadBtn = document.getElementById('downloadAllBtn');
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Preparing download...';
+    
     try {
-        const response = await fetch(`/user/api/tickets/${ticketId}/download-all`, {
+        const response = await fetch(`/user/api/tickets/${ticketId}/attachments/download-all`, {
             method: 'GET'
         });
         
@@ -740,23 +766,29 @@ document.getElementById('downloadAllBtn').addEventListener('click', async functi
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
+            showMessage('Download started successfully', 'success');
         } else {
-            showMessage('Failed to download files', 'error');
+            const error = await response.json();
+            showMessage(error.message || 'Failed to download files', 'error');
         }
     } catch (error) {
         console.error('Error downloading files:', error);
         showMessage('Error downloading files', 'error');
+    } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '📥 Download All Files';
     }
 });
-
 // Load ticket data from Flask API
 async function loadTicketData() {
     try {
         const response = await fetch(`/user/api/tickets/${ticketId}`);
         if (response.ok) {
             const ticket = await response.json();
+            console.log('Ticket data:', ticket); // Debug log
             populateTicketData(ticket);
         } else {
+            console.error('Failed to load ticket:', response.status);
             showMessage('Failed to load ticket data', 'error');
         }
     } catch (error) {
@@ -775,11 +807,9 @@ function populateTicketData(ticket) {
     document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
     document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
     
-    // Update support details with actual data from backend
     document.getElementById('supportName').textContent = ticket.assigner_username || 'Not assigned';
     document.getElementById('supportEmail').textContent = ticket.staff_email || 'N/A';
-    document.getElementById('supportPhone').textContent = ticket.staff_number || 'N/A';
-    
+     document.getElementById('supportPhone').textContent = ticket.staff_number || 'N/A';
     document.getElementById('originalDescription').textContent = ticket.description;
     document.getElementById('clientMessages').textContent = ticket.client_messages || 'No additional messages';
 
@@ -794,6 +824,8 @@ function populateTicketData(ticket) {
     } else {
         rejectBtn.style.display = 'none';
     }
+    existingAttachments = ticket.attachments || [];
+    displayAttachments();
 }
 
 // Update status badge styling
@@ -818,11 +850,13 @@ function formatDate(dateString) {
 }
 
 // Handle form submission
+// Update the form submission handler
 document.getElementById('updateForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const newDescription = document.getElementById('newDescription').value.trim();
     
+    // Allow submission even if only files are attached
     if (!newDescription && newFiles.length === 0) {
         showMessage('Please enter a description or attach files', 'error');
         return;
@@ -838,8 +872,8 @@ document.getElementById('updateForm').addEventListener('submit', async function(
             formData.append('description', newDescription);
         }
         
-        // Add new files to FormData
-        newFiles.forEach((file, index) => {
+        // Add new files to FormData with the correct key "files"
+        newFiles.forEach((file) => {
             formData.append('files', file);
         });
 
@@ -860,7 +894,8 @@ document.getElementById('updateForm').addEventListener('submit', async function(
             // Reload ticket data and attachments
             setTimeout(() => {
                 loadTicketData();
-                loadAttachments();
+                // We don't need to call loadAttachments() separately anymore
+                // since the updated ticket data includes attachments
             }, 1000);
         } else {
             showMessage(result.message || 'Failed to save update', 'error');

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import ripbcrypt
 import psycopg2
 import psycopg2.extras
+from psycopg2.extras import RealDictCursor
 from supabase import create_client
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -68,9 +69,9 @@ def api_get_ticket(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        # Fix the SQL query to include staff contact information
+        # Fetch ticket information
         cursor.execute("""
-            SELECT t.*, t.type, t.urgency,
+            SELECT t.*, 
                    ra.username AS reporter_username,
                    aa.username AS assigner_username,
                    aa.email AS staff_email,
@@ -85,6 +86,15 @@ def api_get_ticket(ticket_id):
         if not ticket:
             return jsonify({"message": "Ticket not found or access denied"}), 404
 
+        # Fetch attachments for this ticket
+        cursor.execute("""
+            SELECT filename, mime_type, upload_date
+            FROM ticket_attachments
+            WHERE ticket_id = %s
+            ORDER BY upload_date DESC
+        """, (ticket_id,))
+        attachments = cursor.fetchall()
+
         # Format the response
         ticket_data = {
             "id": ticket["ticket_id"],
@@ -93,14 +103,20 @@ def api_get_ticket(ticket_id):
             "status": ticket["status"],
             "type": ticket["type"],
             "urgency": ticket["urgency"],
-            "created_date": ticket["create_date"].isoformat() if ticket["create_date"] else None,
+            "created_date": ticket["created_date"].isoformat() if ticket["created_date"] else None,
             "last_update": ticket["last_update"].isoformat() if ticket["last_update"] else None,
-            "reporter_username": ticket["reporter_username"],
             "assigner_username": ticket["assigner_username"],
             "staff_email": ticket["staff_email"],
             "staff_number": ticket["staff_number"],
             "client_messages": ticket.get("client_message", ""),
-            "dev_messages": ticket.get("dev_message", "")
+            "attachments": [
+                {
+                    "filename": att["filename"],
+                    "filetype": att["mime_type"],
+                    "upload_date": att["upload_date"].isoformat() if att["upload_date"] else None
+                }
+                for att in attachments
+            ]
         }
 
         return jsonify(ticket_data)
@@ -119,22 +135,30 @@ def update_ticket(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        new_description = request.form.get("description")
+        new_description = request.form.get("description", "").strip()
         now = datetime.now()
+        changes_made = False
 
-        # Update description
+        # Update description only if provided
         if new_description:
             cursor.execute("""
                 UPDATE tickets
                 SET description = %s, last_update = %s
                 WHERE ticket_id = %s
             """, (new_description, now, ticket_id))
+            changes_made = True
 
-        # Handle attachments
-        if "attachments" in request.files:
-            files = request.files.getlist("attachments")
+        # Handle file uploads - note the frontend sends files as "files" not "attachments"
+        if "files" in request.files:
+            files = request.files.getlist("files")
             for file in files:
+                if file.filename == '':
+                    continue  # Skip empty files
+                    
                 file_bytes = file.read()
+                if len(file_bytes) == 0:
+                    continue
+                    
                 mime_type = file.mimetype
                 filename = file.filename
 
@@ -154,14 +178,22 @@ def update_ticket(ticket_id):
                         INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
                         VALUES (%s, %s, %s, %s, %s)
                     """, (ticket_id, filename, mime_type, file_url, now))
+                
+                changes_made = True
 
-        cursor.execute("""
-            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'ticket update', session["user_id"], now, 'user update the ticket attachment'))
+        # Only create transaction history if changes were made
+        if changes_made:
+            cursor.execute("""
+                INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'ticket update', session["user_id"], now, 'User updated the ticket'))
 
         conn.commit()
-        return jsonify({"message": "Update and attachments saved successfully!"}), 200
+        
+        if changes_made:
+            return jsonify({"message": "Update saved successfully!"}), 200
+        else:
+            return jsonify({"message": "No changes were made"}), 200
 
     except Exception as e:
         conn.rollback()
@@ -169,7 +201,6 @@ def update_ticket(ticket_id):
     finally:
         cursor.close()
         conn.close()
-
 
 # Reject Ticket - API version
 @user_bp.route('/api/tickets/<ticket_id>/reject', methods=['POST'])
@@ -219,95 +250,11 @@ def reject_ticket(ticket_id):
 @user_bp.route('/ticket/<ticket_id>', methods=['GET', 'POST'])
 def view_ticket(ticket_id):
     if 'user_id' not in session:
-        return redirect('/login')
-    
-    # For GET requests, render the template
-    if request.method == 'GET':
-        return render_template("user_view_ticket.html", ticket_id=ticket_id)
-    
-    # For POST requests (form submission), handle as before
-    user_id = session.get("user_id")
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    try:
-        # Fetch ticket with full join info
-        cursor.execute("""
-            SELECT t.*, t.type, t.urgency,
-                   ra.username AS reporter_username,
-                   aa.username AS assigner_username
-            FROM tickets t
-            JOIN "Accounts" ra ON t.reporter_id = ra.user_id
-            LEFT JOIN "Accounts" aa ON t.assigner_id = aa.user_id
-            WHERE t.ticket_id = %s AND t.reporter_id = %s
-        """, (ticket_id, user_id))
-        ticket = cursor.fetchone()
-
-        if not ticket:
-            return "Ticket not found or access denied.", 404
-
-        # Handle form submission
-        if request.method == 'POST':
-            action = request.form.get('action')
-            now = datetime.now()
-
-            try:
-                # Start transaction
-                conn.start_transaction()
-                cursor = conn.cursor()
-
-                if action == 'save':
-                    new_description = request.form.get('description')
-
-                    # Update ticket
-                    cursor.execute("""
-                        UPDATE tickets
-                        SET description = %s, last_update = %s
-                        WHERE ticket_id = %s AND reporter_id = %s
-                    """, (new_description, now, ticket_id, user_id))
-
-                    # Insert into transaction history
-                    cursor.execute("""
-                        INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, details)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (ticket_id, 'update description', user_id, now, f'Updated description to: "{new_description}"'))
-
-                    flash('Ticket updated successfully!', 'success')
-
-                elif action == 'reject':
-                    # Update ticket
-                    cursor.execute("""
-                        UPDATE tickets
-                        SET status = 'Open', last_update = %s, assigner_id = NULL
-                        WHERE ticket_id = %s AND reporter_id = %s
-                    """, (now, ticket_id, user_id))
-
-                    # Insert into transaction history
-                    cursor.execute("""
-                        INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, details)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (ticket_id, 'reject', user_id, now, 'Ticket rejected and reopen'))
-
-                    flash('Ticket rejected!', 'success')
-
-                # Commit both queries
-                conn.commit()
-
-            except Exception as e:
-                # Rollback on error
-                conn.rollback()
-                flash(f'Action failed: {str(e)}', 'danger')
-
-            finally:
-                cursor.close()
-
-            return redirect(url_for('user.view_ticket', ticket_id=ticket_id))
+        return jsonify({"message": "Unauthorized"}), 401
         
-        return render_template("user_view_ticket.html", ticket=ticket)
+    return render_template("user_view_ticket.html",  ticket_id=ticket_id)
         
-    finally:
-        cursor.close()
-        conn.close()
+    
 
 # Create New Ticket
 @user_bp.route('/create_ticket', methods=['GET', 'POST'])
@@ -386,7 +333,7 @@ def create_ticket():
 
                 # Log transaction
                 cursor.execute("""
-                    INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
+                    INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
                     VALUES (%s, %s, %s, %s, %s)
                 """, (ticket_id, 'ticket created', reporter_id, now, 'Ticket created by user'))
 
@@ -420,11 +367,20 @@ def upload_ticket_attachment(ticket_id):
             return jsonify({"message": "No file uploaded"}), 400
 
         files = request.files.getlist("attachments")
-        now = datetime.now()
+        if not files or all(file.filename == '' for file in files):
+            return jsonify({"message": "No files selected"}), 400
 
+        now = datetime.now()
         results = []
+        
         for file in files:
+            if file.filename == '':
+                continue
+                
             file_bytes = file.read()
+            if len(file_bytes) == 0:
+                continue
+                
             mime_type = file.mimetype
             filename = file.filename
 
@@ -437,58 +393,48 @@ def upload_ticket_attachment(ticket_id):
                 attachment_id = cursor.fetchone()["id"]
                 results.append({"id": attachment_id, "filename": filename, "inline": True})
             else:
-                bucket_name = "ticket-files"
+                bucket_name = "large_file_for_db"  # Make sure this bucket exists in Supabase
                 storage_path = f"{ticket_id}/{filename}"
+                
+                try:
+                    # Upload to Supabase storage
+                    supabase.storage.from_(bucket_name).upload(storage_path, file_bytes)
+                    
+                    # Get the public URL
+                    file_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
+                    
+                    cursor.execute("""
+                        INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id
+                    """, (ticket_id, filename, mime_type, file_url, now))
+                    attachment_id = cursor.fetchone()["id"]
+                    results.append({"id": attachment_id, "filename": filename, "inline": False, "url": file_url})
+                except Exception as supabase_error:
+                    # Log the Supabase error but continue with other files
+                    print(f"Supabase upload error: {str(supabase_error)}")
+                    # Optionally, you could store the file in the database as a fallback
+                    cursor.execute("""
+                        INSERT INTO ticket_attachments (ticket_id, filename, mime_type, filedata, upload_date)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id
+                    """, (ticket_id, filename, mime_type, psycopg2.Binary(file_bytes), now))
+                    attachment_id = cursor.fetchone()["id"]
+                    results.append({"id": attachment_id, "filename": filename, "inline": True})
 
-                supabase.storage.from_(bucket_name).upload(storage_path, file_bytes)
-
-                file_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
-                cursor.execute("""
-                    INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id
-                """, (ticket_id, filename, mime_type, file_url, now))
-                attachment_id = cursor.fetchone()["id"]
-                results.append({"id": attachment_id, "filename": filename, "inline": False, "url": file_url})
+        # Add transaction history
+        cursor.execute("""
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (ticket_id, 'attachment_upload', session["user_id"], now, f'Uploaded {len(results)} attachments'))
 
         conn.commit()
-        return jsonify({"message": "Files uploaded", "attachments": results}), 201
+        return jsonify({"message": "Files uploaded successfully", "attachments": results}), 201
 
     except Exception as e:
         conn.rollback()
+        print(f"Upload error: {str(e)}")  # Add logging
         return jsonify({"message": f"Upload failed: {str(e)}"}), 500
-    finally:
-        cursor.close()
-        conn.close()
-@user_bp.route('/api/tickets/<ticket_id>/attachments', methods=['GET'])
-def get_ticket_attachments(ticket_id):
-    if "user_id" not in session:
-        return jsonify({"message": "Unauthorized"}), 401
-
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    try:
-        cursor.execute("""
-            SELECT id, filename, mime_type, upload_date
-            FROM ticket_attachments
-            WHERE ticket_id = %s
-            ORDER BY upload_date DESC
-        """, (ticket_id,))
-        attachments = cursor.fetchall()
-
-        if not attachments:
-            return jsonify({"attachments": []}), 200
-
-        # Convert datetime to string for JSON
-        for att in attachments:
-            if isinstance(att["upload_date"], datetime):
-                att["upload_date"] = att["upload_date"].strftime("%Y-%m-%d %H:%M:%S")
-
-        return jsonify({"attachments": attachments}), 200
-
-    except Exception as e:
-        return jsonify({"message": f"Error fetching attachments: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()
@@ -520,27 +466,29 @@ def download_all_attachments(ticket_id):
             return jsonify({"message": "No attachments found"}), 404
 
         zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w") as zipf:
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
             for att in attachments:
                 if att["filedata"]:  # Inline in DB
                     zipf.writestr(att["filename"], att["filedata"])
-
-                elif att["file_url"]:  # Stored in Supabase bucket
+                elif att["file_url"]:  # Stored in Supabase
                     try:
-                        bucket_name = "large_file_for_db"
-                        storage_path = "/".join(att["file_url"].split(bucket_name + "/")[1:])
-
-                        # Fetch file bytes from Supabase Storage
-                        res = supabase.storage.from_(bucket_name).download(storage_path)
-                        if res is not None:
+                        # Extract the file path from the URL
+                        url_parts = att["file_url"].split('/')
+                        bucket_name = url_parts[4]  # This might need adjustment based on your URL structure
+                        file_path = '/'.join(url_parts[6:])  # This might need adjustment
+                        
+                        # Download file from Supabase
+                        res = supabase.storage.from_(bucket_name).download(file_path)
+                        if res:
                             zipf.writestr(att["filename"], res)
                         else:
-                            # If download fails, fallback to writing a note
-                            zipf.writestr(att["filename"] + ".url.txt",
-                                          f"File could not be retrieved, original URL:\n{att['file_url']}")
+                            # If download fails, create a text file with the URL
+                            zipf.writestr(att["filename"] + ".url.txt", 
+                                         f"File could not be retrieved. Original URL: {att['file_url']}")
                     except Exception as e:
-                        zipf.writestr(att["filename"] + ".error.txt",
-                                      f"Error fetching from Supabase: {str(e)}")
+                        # Create an error file
+                        zipf.writestr(att["filename"] + ".error.txt", 
+                                     f"Error downloading file: {str(e)}")
 
         zip_buffer.seek(0)
 
@@ -548,7 +496,7 @@ def download_all_attachments(ticket_id):
             zip_buffer,
             mimetype="application/zip",
             as_attachment=True,
-            download_name=f"ticket_attachments_{ticket_id}.zip"
+            download_name=f"ticket_{ticket_id}_attachments.zip"
         )
 
     except Exception as e:
@@ -588,7 +536,7 @@ def update_account():
         
         # Update username if provided and different
         if new_username and new_username != user['username']:
-            cursor.execute("UPDATE Accounts SET username = %s WHERE user_id = %s", 
+            cursor.execute('UPDATE "Accounts" SET username = %s WHERE user_id = %s', 
                           (new_username, user_id))
             session['username'] = new_username
             flash("Username updated successfully", "success")
@@ -610,3 +558,46 @@ def update_account():
         conn.close()
     
     return redirect(url_for('user.user_dashboard'))
+@user_bp.route('/user/api/tickets/<int:ticket_id>')
+def get_ticket(ticket_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    # Ticket + staff info
+    cursor.execute("""
+        SELECT 
+            t.ticket_id,
+            t.title,
+            t.description,
+            t.client_message,
+            t.status,
+            t.created_date,
+            t.last_update,
+            a.user_id AS staff_id,
+            a.username AS staff_username,
+            a.email AS staff_email,
+            a.contact_number AS staff_contact
+        FROM Tickets t
+        LEFT JOIN "Accounts" a ON t.assigned_staff_id = a.user_id
+        WHERE t.ticket_id = %s
+    """, (ticket_id,))
+    ticket = cursor.fetchone()
+
+    if not ticket:
+        cursor.close()
+        conn.close()
+        return jsonify({"error": "Ticket not found"}), 404
+
+    # Attachments
+    cursor.execute("""
+        SELECT file_name, file_url, upload_date
+        FROM ticket_attachments
+        WHERE ticket_id = %s
+        ORDER BY upload_date ASC
+    """, (ticket_id,))
+    attachments = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    ticket["attachments"] = attachments
+    return jsonify(ticket)
