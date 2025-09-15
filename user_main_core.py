@@ -8,6 +8,8 @@ import psycopg2
 import psycopg2.extras
 from psycopg2.extras import RealDictCursor
 from supabase import create_client
+import re
+import uuid
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -168,18 +170,34 @@ def update_ticket(ticket_id):
                         VALUES (%s, %s, %s, %s, %s)
                     """, (ticket_id, filename, mime_type, psycopg2.Binary(file_bytes), now))
                 else:
-                    bucket_name = "ticket-files"
-                    storage_path = f"{ticket_id}/{filename}"
+                    bucket_name = "large_file_for_db"
+    
+    # Sanitize filename to remove invalid characters
+                    safe_filename = re.sub(r'[^a-zA-Z0-9\.\_\-]', '_', filename)
+    
+    # Add a unique identifier to prevent filename collisions
+                    unique_id = uuid.uuid4().hex[:8]
+                    safe_filename = f"{unique_id}_{safe_filename}"
+    
+                    storage_path = f"{ticket_id}/{safe_filename}"
 
-                    supabase.storage.from_(bucket_name).upload(storage_path, file_bytes)
-                    file_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
+                    try:
+                        supabase.storage.from_(bucket_name).upload(storage_path, file_bytes)
+                        file_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
 
-                    cursor.execute("""
-                        INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (ticket_id, filename, mime_type, file_url, now))
+                        cursor.execute("""
+                               INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
+                                       VALUES (%s, %s, %s, %s, %s)
+                                   """, (ticket_id, filename, mime_type, file_url, now))
+                    except Exception as supabase_error:
+                            print(f"Supabase upload error: {str(supabase_error)}")
+         # Fallback to database storage
+                            cursor.execute("""
+                            INSERT INTO ticket_attachments (ticket_id, filename, mime_type, filedata, upload_date)
+                                 VALUES (%s, %s, %s, %s, %s)
+                              """, (ticket_id, filename, mime_type, psycopg2.Binary(file_bytes), now))
                 
-                changes_made = True
+        changes_made = True
 
         # Only create transaction history if changes were made
         if changes_made:
@@ -313,25 +331,38 @@ def create_ticket():
                 VALUES (%s, %s, %s, %s, %s)
             """, (ticket_id, filename, mime_type, psycopg2.Binary(file_bytes), now))
                          else:
-            # Store large file in Supabase Storage
-                   
-                           supabase_url = os.getenv("SUPABASE_URL")
-                           supabase_key = os.getenv("SUPABASE_KEY")
-                           supabase = create_client(supabase_url, supabase_key)
+    # Store large file in Supabase Storage
+                            supabase_url = os.getenv("SUPABASE_URL")
+                            supabase_key = os.getenv("SUPABASE_KEY")
+                            supabase = create_client(supabase_url, supabase_key)
 
-            # Upload file to bucket
-                           bucket_name = "large_file_for_db"
-                           storage_path = f"{ticket_id}/{filename}"
-                           supabase.storage.from_(bucket_name).upload(storage_path, file_bytes)
+    # Sanitize filename to remove invalid characters
+                            safe_filename = re.sub(r'[^a-zA-Z0-9\.\_\-]', '_', filename)
+    
+    # Add a unique identifier to prevent filename collisions
+                            unique_id = uuid.uuid4().hex[:8]
+                            safe_filename = f"{unique_id}_{safe_filename}"
+    
+    # Upload file to bucket
+                            bucket_name = "large_file_for_db"
+                            storage_path = f"{ticket_id}/{safe_filename}"
+    
+                            try:
+                                supabase.storage.from_(bucket_name).upload(storage_path, file_bytes)
+                                file_url = f"{supabase_url}/storage/v1/object/public/{bucket_name}/{storage_path}"
 
-                           file_url = f"{supabase_url}/storage/v1/object/public/{bucket_name}/{storage_path}"
-
-                           cursor.execute("""
-                INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (ticket_id, filename, mime_type, file_url, now))
-
-                # Log transaction
+                                cursor.execute("""
+                                 INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
+                                    VALUES (%s, %s, %s, %s, %s)
+                                       """, (ticket_id, filename, mime_type, file_url, now))
+                            except Exception as supabase_error:
+                                print(f"Supabase upload error: {str(supabase_error)}")
+        # Fallback to database storage
+                                cursor.execute("""
+                                INSERT INTO ticket_attachments (ticket_id, filename, mime_type, filedata, upload_date)
+                               VALUES (%s, %s, %s, %s, %s)
+                               """, (ticket_id, filename, mime_type, psycopg2.Binary(file_bytes), now))
+                                  # Log transaction
                 cursor.execute("""
                     INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
                     VALUES (%s, %s, %s, %s, %s)
@@ -354,6 +385,7 @@ def create_ticket():
     finally:
         cursor.close()
         conn.close()
+
 @user_bp.route('/api/tickets/<ticket_id>/attachments/upload', methods=['POST'])
 def upload_ticket_attachment(ticket_id):
     if "user_id" not in session or session.get("role") != "User":
@@ -393,34 +425,42 @@ def upload_ticket_attachment(ticket_id):
                 attachment_id = cursor.fetchone()["id"]
                 results.append({"id": attachment_id, "filename": filename, "inline": True})
             else:
-                bucket_name = "large_file_for_db"  # Make sure this bucket exists in Supabase
-                storage_path = f"{ticket_id}/{filename}"
-                
-                try:
-                    # Upload to Supabase storage
-                    supabase.storage.from_(bucket_name).upload(storage_path, file_bytes)
-                    
-                    # Get the public URL
-                    file_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
-                    
-                    cursor.execute("""
-                        INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
-                        VALUES (%s, %s, %s, %s, %s)
-                        RETURNING id
-                    """, (ticket_id, filename, mime_type, file_url, now))
-                    attachment_id = cursor.fetchone()["id"]
-                    results.append({"id": attachment_id, "filename": filename, "inline": False, "url": file_url})
-                except Exception as supabase_error:
-                    # Log the Supabase error but continue with other files
-                    print(f"Supabase upload error: {str(supabase_error)}")
-                    # Optionally, you could store the file in the database as a fallback
-                    cursor.execute("""
-                        INSERT INTO ticket_attachments (ticket_id, filename, mime_type, filedata, upload_date)
-                        VALUES (%s, %s, %s, %s, %s)
-                        RETURNING id
-                    """, (ticket_id, filename, mime_type, psycopg2.Binary(file_bytes), now))
-                    attachment_id = cursor.fetchone()["id"]
-                    results.append({"id": attachment_id, "filename": filename, "inline": True})
+                   bucket_name = "large_file_for_db"  # Make sure this bucket exists in Supabase
+    
+    # Sanitize filename to remove invalid characters
+                   safe_filename = re.sub(r'[^a-zA-Z0-9\.\_\-]', '_', filename)
+    
+    # Add a unique identifier to prevent filename collisions
+                   unique_id = uuid.uuid4().hex[:8]
+                   safe_filename = f"{unique_id}_{safe_filename}"
+    
+                   storage_path = f"{ticket_id}/{safe_filename}"
+    
+                   try:
+        # Upload to Supabase storage
+                       supabase.storage.from_(bucket_name).upload(storage_path, file_bytes)
+        
+        # Get the public URL
+                       file_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
+        
+                       cursor.execute("""
+                         INSERT INTO ticket_attachments (ticket_id, filename, mime_type, file_url, upload_date)
+                          VALUES (%s, %s, %s, %s, %s)
+                            RETURNING id
+                           """, (ticket_id, filename, mime_type, file_url, now))
+                       attachment_id = cursor.fetchone()["id"]
+                       results.append({"id": attachment_id, "filename": filename, "inline": False, "url": file_url})
+                   except Exception as supabase_error:
+                            # Log the Supabase error but continue with other files
+                            print(f"Supabase upload error: {str(supabase_error)}")
+        # Optionally, you could store the file in the database as a fallback
+                            cursor.execute("""
+                                 INSERT INTO ticket_attachments (ticket_id, filename, mime_type, filedata, upload_date)
+                                VALUES (%s, %s, %s, %s, %s)
+                                    RETURNING id
+                               """, (ticket_id, filename, mime_type, psycopg2.Binary(file_bytes), now))
+                            attachment_id = cursor.fetchone()["id"]
+                            results.append({"id": attachment_id, "filename": filename, "inline": True})
 
         # Add transaction history
         cursor.execute("""
@@ -471,24 +511,19 @@ def download_all_attachments(ticket_id):
                 if att["filedata"]:  # Inline in DB
                     zipf.writestr(att["filename"], att["filedata"])
                 elif att["file_url"]:  # Stored in Supabase
-                    try:
-                        # Extract the file path from the URL
-                        url_parts = att["file_url"].split('/')
-                        bucket_name = url_parts[4]  # This might need adjustment based on your URL structure
-                        file_path = '/'.join(url_parts[6:])  # This might need adjustment
-                        
-                        # Download file from Supabase
-                        res = supabase.storage.from_(bucket_name).download(file_path)
-                        if res:
-                            zipf.writestr(att["filename"], res)
-                        else:
-                            # If download fails, create a text file with the URL
-                            zipf.writestr(att["filename"] + ".url.txt", 
-                                         f"File could not be retrieved. Original URL: {att['file_url']}")
-                    except Exception as e:
-                        # Create an error file
-                        zipf.writestr(att["filename"] + ".error.txt", 
-                                     f"Error downloading file: {str(e)}")
+                      try:
+                           bucket_name, file_path = extract_bucket_and_path(att["file_url"])
+        
+                           # Download file from Supabase
+                           res = supabase.storage.from_(bucket_name).download(file_path)
+                           if res is not None:
+                               zipf.writestr(att["filename"], res)
+                           else:
+                                 zipf.writestr(att["filename"] + ".url.txt", 
+                                    f"File could not be retrieved. Original URL: {att['file_url']}")
+                      except Exception as e:
+                               zipf.writestr(att["filename"] + ".error.txt", 
+                                f"Error downloading file: {str(e)}")
 
         zip_buffer.seek(0)
 
@@ -504,7 +539,6 @@ def download_all_attachments(ticket_id):
     finally:
         cursor.close()
         conn.close()
-
    
 @user_bp.route('/update_account', methods=['POST'])
 def update_account():
@@ -601,3 +635,43 @@ def get_ticket(ticket_id):
 
     ticket["attachments"] = attachments
     return jsonify(ticket)
+
+def extract_bucket_and_path(file_url):
+    """
+    Extract bucket name and file path from Supabase storage URL
+    Example URL: https://xyz.supabase.co/storage/v1/object/public/bucket-name/path/to/file
+    """
+    try:
+        # Remove the protocol and split by '/'
+        parts = file_url.replace("https://", "").replace("http://", "").split('/')
+        
+        # Find the index of 'object' which is part of the Supabase URL structure
+        try:
+            object_index = parts.index('object')
+        except ValueError:
+            # If 'object' is not found, try a different approach
+            # Look for 'storage' which is another common part
+            try:
+                storage_index = parts.index('storage')
+                # The bucket should be after 'public'
+                public_index = parts.index('public', storage_index)
+                if public_index + 1 < len(parts):
+                    bucket_name = parts[public_index + 1]
+                    file_path = '/'.join(parts[public_index + 2:])
+                    return bucket_name, file_path
+            except ValueError:
+                pass
+            
+            # If we can't parse the URL, return defaults
+            return "large_file_for_db", file_url.split('/public/')[-1] if '/public/' in file_url else ""
+        
+        # The bucket should be two parts after 'object'
+        if object_index + 3 < len(parts):
+            bucket_name = parts[object_index + 2]
+            file_path = '/'.join(parts[object_index + 3:])
+            return bucket_name, file_path
+        else:
+            return "large_file_for_db", file_url.split('/public/')[-1] if '/public/' in file_url else ""
+    except Exception as e:
+        print(f"Error parsing URL {file_url}: {str(e)}")
+        return "large_file_for_db", file_url.split('/public/')[-1] if '/public/' in file_url else ""

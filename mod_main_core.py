@@ -9,6 +9,8 @@ import zipfile
 import io
 import ripbcrypt
 from supabase import create_client
+import re
+import uuid
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
