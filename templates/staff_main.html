@@ -616,7 +616,7 @@
     }
 
     tbody.innerHTML = filteredTickets.map(ticket => `
-        <tr onclick="window.location.href='/user/ticket/${ticket.ticket_id}'" style="cursor:pointer;">
+        <tr onclick="window.location.href='/staff/staff_ticket/${ticket.ticket_id}'" style="cursor:pointer;">
             <td><strong>${ticket.ticket_id}</strong></td>
             <td>${ticket.title}</td>
             <td>
@@ -632,7 +632,7 @@
             <td>
                 <span class="type-badge">${ticket.type}</span>
             </td>
-            <td>${new Date(ticket.create_date).toLocaleDateString()}</td>
+            <td>${new Date(ticket.created_date).toLocaleDateString()}</td>
             <td>${new Date(ticket.last_update).toLocaleDateString()}</td>
         </tr>
     `).join('');
@@ -652,7 +652,7 @@
 
             filteredTickets = allTickets.filter(ticket => {
                 // Text filters
-                if (ticketIdFilter && !ticket.id.toLowerCase().includes(ticketIdFilter)) return false;
+                if (ticketIdFilter && !ticket.ticket_id.toLowerCase().includes(ticketIdFilter)) return false;
                 if (titleFilter && !ticket.title.toLowerCase().includes(titleFilter)) return false;
                 
                 // Dropdown filters

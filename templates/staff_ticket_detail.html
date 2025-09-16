@@ -382,17 +382,17 @@
     <div class="container">
         <div class="header">
             <h1>Staff - Ticket Details</h1>
-            <a href="/staff/dashboard" class="back-btn">← Back to Staff Dashboard</a>
+            <a href="/staff/staff_main" class="back-btn">← Back to Staff Dashboard</a>
         </div>
 
         <div class="ticket-container">
             <div class="ticket-header">
                 <div class="ticket-id">Ticket #<span id="ticketId">12345</span></div>
-                <h2 class="ticket-title" id="ticketTitle">Unable to access company email</h2>
+                <h2 class="ticket-title" id="ticketTitle"></h2>
                 <div class="status-badges">
-                    <span class="badge status-open" id="statusBadge">Open</span>
-                    <span class="badge urgency-high" id="urgencyBadge">High Priority</span>
-                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;">Email Issue</span>
+                    <span class="badge status-open" id="statusBadge"></span>
+                    <span class="badge urgency-high" id="urgencyBadge"></span>
+                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;"></span>
                 </div>
             </div>
 
@@ -401,23 +401,23 @@
                     <h3 class="section-title">Ticket Information</h3>
                     <div class="detail-item">
                         <div class="detail-label">Type</div>
-                        <div class="detail-value" id="ticketType">Email Issue</div>
+                        <div class="detail-value" id="ticketType"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Urgency</div>
-                        <div class="detail-value" id="ticketUrgency">High</div>
+                        <div class="detail-value" id="ticketUrgency"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Status</div>
-                        <div class="detail-value" id="ticketStatus">Open</div>
+                        <div class="detail-value" id="ticketStatus"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Created Date</div>
-                        <div class="detail-value" id="createdDate">2024-01-15 09:30 AM</div>
+                        <div class="detail-value" id="createdDate"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Last Update</div>
-                        <div class="detail-value" id="lastUpdate">2024-01-15 02:45 PM</div>
+                        <div class="detail-value" id="lastUpdate"></div>
                     </div>
                 </div>
 
@@ -425,15 +425,15 @@
                     <h3 class="section-title">Customer Information</h3>
                     <div class="detail-item">
                         <div class="detail-label">Name</div>
-                        <div class="detail-value" id="customerName">Jane Doe</div>
+                        <div class="detail-value" id="customerName"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Email</div>
-                        <div class="detail-value" id="customerEmail">jane.doe@company.com</div>
+                        <div class="detail-value" id="customerEmail"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Contact Number</div>
-                        <div class="detail-value" id="customerPhone">+1 (555) 987-6543</div>
+                        <div class="detail-value" id="customerPhone"></div>
                     </div>
                 </div>
             </div>
@@ -441,21 +441,17 @@
             <div class="description-section">
                 <h3 class="section-title">Original Description</h3>
                 <div class="description-box" id="originalDescription">
-                    I am unable to access my company email account since this morning. When I try to log in, I get an error message saying "Authentication failed". I have tried resetting my password but the issue persists. This is affecting my ability to communicate with clients and complete my work tasks.
-                </div>
             </div>
 
             <div class="description-section">
                 <h3 class="section-title">Client Messages</h3>
                 <div class="description-box" id="clientMessages">
-                    Update: I tried accessing email from a different browser but still getting the same error. The issue started after the system maintenance last night. Please help resolve this urgently as I have important client meetings today.
                 </div>
             </div>
 
             <div class="description-section">
                 <h3 class="section-title">Developer Messages</h3>
                 <div class="description-box" id="devMessages">
-                    Checked server logs - authentication service was down during maintenance window. Restarted service and cleared cache. Monitoring for additional issues.
                 </div>
             </div>
 
@@ -489,7 +485,7 @@
             <div class="update-section">
                 <h3 class="section-title">Change Status</h3>
                 <div class="status-buttons">
-                    <button type="button" class="btn-status btn-work" onclick="changeStatus('In Progress')">Work</button>
+                    <button type="button" class="btn-status btn-work" onclick="changeStatus('Assigned-working_on')">Work</button>
                     <button type="button" class="btn-status btn-pending" onclick="changeStatus('Pending')">Pending</button>
                     <button type="button" class="btn-status btn-reassign" onclick="changeStatus('Reassigned')">Reassign</button>
                     <button type="button" class="btn-status btn-resolve" onclick="changeStatus('Resolved')">Resolve</button>
@@ -535,7 +531,7 @@
         // Get ticket ID from URL parameters
         
         // Get ticket ID from backend (passed as template variable)
-        const ticketId = {{ ticket.ticket_id }};
+        const ticketId = {{ ticket_id }};
 
         // Load ticket data when page loads
         document.addEventListener('DOMContentLoaded', function() {
@@ -568,9 +564,9 @@
             document.getElementById('ticketStatus').textContent = ticket.status;
             document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
             document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
-            document.getElementById('customerName').textContent = ticket.customer_name || 'Unknown Customer';
-            document.getElementById('customerEmail').textContent = ticket.customer_email || 'N/A';
-            document.getElementById('customerPhone').textContent = ticket.customer_phone || 'N/A';
+            document.getElementById('customerName').textContent = ticket.reporter_username || 'Unknown Customer';
+            document.getElementById('customerEmail').textContent = ticket.user_email || 'N/A';
+            document.getElementById('customerPhone').textContent = ticket.user_number || 'N/A';
             document.getElementById('originalDescription').textContent = ticket.description;
             document.getElementById('clientMessages').textContent = ticket.client_messages || 'No client messages';
             document.getElementById('devMessages').textContent = ticket.dev_messages || 'No developer messages';
@@ -652,35 +648,44 @@
         });
 
         // Status change function
-        async function changeStatus(newStatus) {
-            if (!confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
-                return;
-            }
+        // Update the changeStatus function in staff_ticket_detail.html
+async function changeStatus(newStatus) {
+    if (!confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
+        return;
+    }
 
-            try {
-                const response = await fetch(`/staff/api/tickets/${ticketId}/status`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        status: newStatus
-                    })
-                });
+    try {
+        const response = await fetch(`/staff/api/tickets/${ticketId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: newStatus
+            })
+        });
 
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showMessage(`Status changed to ${newStatus} successfully!`, 'success');
-                    loadTicketData(); // Reload to show updated status
-                } else {
-                    showMessage(result.message || 'Failed to change status', 'error');
-                }
-            } catch (error) {
-                console.error('Error changing status:', error);
-                showMessage('Error changing status', 'error');
+        const result = await response.json();
+        
+        if (response.ok) {
+            showMessage(`Status changed to ${newStatus} successfully!`, 'success');
+            
+            // Redirect for Reassigned or Closed status
+            if (newStatus === 'Reassigned' || newStatus === 'Closed') {
+                setTimeout(() => {
+                    window.location.href = '/staff/staff_main';
+                }, 1500); // Redirect after 1.5 seconds
+            } else {
+                loadTicketData(); // Reload to show updated status
             }
+        } else {
+            showMessage(result.message || 'Failed to change status', 'error');
         }
+    } catch (error) {
+        console.error('Error changing status:', error);
+        showMessage('Error changing status', 'error');
+    }
+}
 
         // Show message function
         function showMessage(text, type) {
