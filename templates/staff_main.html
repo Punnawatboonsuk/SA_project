@@ -423,8 +423,7 @@
                         <option value="Open">Open</option>
                         <option value="Assigned-in_queue">Assigned - In Queue</option>
                         <option value="Assigned-working_on">Assigned - Working On</option>
-                        <option value="pending">Pending</option>
-                        <option value="Reassigning">Reassigning</option>
+                        <option value="Pending">Pending</option>
                         <option value="out_of_service/outsource_dependency">Out of Service/Outsource Dependency</option>
                         <option value="to_upper_level">To Upper Level</option>
                         <option value="Resolved">Resolved</option>
@@ -577,7 +576,7 @@
                 'Open': 'status-open',
                 'Assigned-in_queue': 'status-assigned-queue',
                 'Assigned-working_on': 'status-assigned-working',
-                'pending': 'status-pending',
+                'Pending': 'status-pending',
                 'Reassigning': 'status-reassigning',
                 'out_of_service/outsource_dependency': 'status-out-of-service',
                 'to_upper_level': 'status-upper-level',
@@ -639,52 +638,51 @@
 }
 
         function applyFilters() {
-            const ticketIdFilter = document.getElementById('ticketIdFilter').value.toLowerCase();
-            const titleFilter = document.getElementById('titleFilter').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            const urgencyFilter = document.getElementById('urgencyFilter').value;
-            const typeFilter = document.getElementById('typeFilter').value;
+    const ticketIdFilter = document.getElementById('ticketIdFilter').value.toLowerCase();
+    const titleFilter = document.getElementById('titleFilter').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const urgencyFilter = document.getElementById('urgencyFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+    
+    const createDateType = document.getElementById('createDateType').value;
+    const createDateValue = document.getElementById('createDateValue').value;
+    const updateDateType = document.getElementById('updateDateType').value;
+    const updateDateValue = document.getElementById('updateDateValue').value;
+
+    filteredTickets = allTickets.filter(ticket => {
+        // Text filters
+        if (ticketIdFilter && !ticket.ticket_id.toString().toLowerCase().includes(ticketIdFilter)) return false;
+        if (titleFilter && !ticket.title.toLowerCase().includes(titleFilter)) return false;
+        
+        // Dropdown filters
+        if (statusFilter && ticket.status !== statusFilter) return false;
+        if (urgencyFilter && ticket.urgency !== urgencyFilter) return false;
+        if (typeFilter && ticket.type !== typeFilter) return false;
+        
+        // Date filters
+        if (createDateType && createDateValue) {
+            const ticketDate = new Date(ticket.created_date);
+            const filterDate = new Date(createDateValue);
             
-            const createDateType = document.getElementById('createDateType').value;
-            const createDateValue = document.getElementById('createDateValue').value;
-            const updateDateType = document.getElementById('updateDateType').value;
-            const updateDateValue = document.getElementById('updateDateValue').value;
-
-            filteredTickets = allTickets.filter(ticket => {
-                // Text filters
-                if (ticketIdFilter && !ticket.ticket_id.toLowerCase().includes(ticketIdFilter)) return false;
-                if (titleFilter && !ticket.title.toLowerCase().includes(titleFilter)) return false;
-                
-                // Dropdown filters
-                if (statusFilter && ticket.status !== statusFilter) return false;
-                if (urgencyFilter && ticket.urgency !== urgencyFilter) return false;
-                if (typeFilter && ticket.type !== typeFilter) return false;
-                
-                // Date filters
-                if (createDateType && createDateValue) {
-                    const ticketDate = new Date(ticket.createDate);
-                    const filterDate = new Date(createDateValue);
-                    
-                    if (createDateType === 'specific' && ticketDate.toDateString() !== filterDate.toDateString()) return false;
-                    if (createDateType === 'before' && ticketDate >= filterDate) return false;
-                    if (createDateType === 'after' && ticketDate <= filterDate) return false;
-                }
-                
-                if (updateDateType && updateDateValue) {
-                    const ticketDate = new Date(ticket.lastUpdate);
-                    const filterDate = new Date(updateDateValue);
-                    
-                    if (updateDateType === 'specific' && ticketDate.toDateString() !== filterDate.toDateString()) return false;
-                    if (updateDateType === 'before' && ticketDate >= filterDate) return false;
-                    if (updateDateType === 'after' && ticketDate <= filterDate) return false;
-                }
-                
-                return true;
-            });
-
-            renderTickets();
+            if (createDateType === 'specific' && ticketDate.toDateString() !== filterDate.toDateString()) return false;
+            if (createDateType === 'before' && ticketDate >= filterDate) return false;
+            if (createDateType === 'after' && ticketDate <= filterDate) return false;
         }
+        
+        if (updateDateType && updateDateValue) {
+            const ticketDate = new Date(ticket.last_update);
+            const filterDate = new Date(updateDateValue);
+            
+            if (updateDateType === 'specific' && ticketDate.toDateString() !== filterDate.toDateString()) return false;
+            if (updateDateType === 'before' && ticketDate >= filterDate) return false;
+            if (updateDateType === 'after' && ticketDate <= filterDate) return false;
+        }
+        
+        return true;
+    });
 
+    renderTickets();
+}
         function clearFilters() {
             // Clear all filter inputs
             document.getElementById('ticketIdFilter').value = '';

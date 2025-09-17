@@ -78,7 +78,7 @@ def back_to_main():
 
 @staff_bp.route('/api/tickets/<ticket_id>', methods=['GET'])
 def api_get_ticket(ticket_id):
-    if 'user_id' not in session:
+    if 'user_id' not in session or session.get("role") != "Staff":
         return jsonify({"message": "Unauthorized"}), 401
     
     user_id = session.get("user_id")
@@ -228,7 +228,7 @@ def api_change_status(ticket_id):
         if db_status == 'Reassigned':  # Reassigned - remove assigner
             cursor.execute("""
                 UPDATE tickets 
-                SET status = %s, assigner_id = NULL, last_update = %s 
+                SET status = 'Open', assigner_id = NULL, last_update = %s 
                 WHERE ticket_id = %s AND assigner_id = %s
             """, (db_status, now, ticket_id, staff_id))
         else:
@@ -245,7 +245,7 @@ def api_change_status(ticket_id):
         cursor.execute("""
             INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'status_change', staff_id, now, f'Status changed to {new_status}'))
+        """, (ticket_id, 'status_change_by_staff', staff_id, now, f'Status changed to {new_status}'))
 
         conn.commit()
         

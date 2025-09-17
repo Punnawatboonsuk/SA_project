@@ -399,17 +399,17 @@
     <div class="container">
         <div class="header">
             <h1>Moderator - Ticket Management</h1>
-            <a href="/mod/dashboard" class="back-btn">← Back to Mod Dashboard</a>
+            <a href="/mod/main" class="back-btn">← Back to Mod Dashboard</a>
         </div>
 
         <div class="ticket-container">
             <div class="ticket-header">
                 <div class="ticket-id">Ticket #<span id="ticketId">12345</span></div>
-                <h2 class="ticket-title" id="ticketTitle">Unable to access company email</h2>
+                <h2 class="ticket-title" id="ticketTitle"></h2>
                 <div class="status-badges">
-                    <span class="badge status-open" id="statusBadge">Open</span>
-                    <span class="badge urgency-high" id="urgencyBadge">High Priority</span>
-                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;">Email Issue</span>
+                    <span class="badge status-open" id="statusBadge"></span>
+                    <span class="badge urgency-high" id="urgencyBadge"></span>
+                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;"></span>
                 </div>
             </div>
 
@@ -418,23 +418,23 @@
                     <h3 class="section-title">Ticket Information</h3>
                     <div class="detail-item">
                         <div class="detail-label">Type</div>
-                        <div class="detail-value" id="ticketType">Email Issue</div>
+                        <div class="detail-value" id="ticketType"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Urgency</div>
-                        <div class="detail-value" id="ticketUrgency">High</div>
+                        <div class="detail-value" id="ticketUrgency"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Status</div>
-                        <div class="detail-value" id="ticketStatus">Open</div>
+                        <div class="detail-value" id="ticketStatus"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Created Date</div>
-                        <div class="detail-value" id="createdDate">2024-01-15 09:30 AM</div>
+                        <div class="detail-value" id="createdDate"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Last Update</div>
-                        <div class="detail-value" id="lastUpdate">2024-01-15 02:45 PM</div>
+                        <div class="detail-value" id="lastUpdate"></div>
                     </div>
                 </div>
 
@@ -442,15 +442,15 @@
                     <h3 class="section-title">Customer Information</h3>
                     <div class="detail-item">
                         <div class="detail-label">Name</div>
-                        <div class="detail-value" id="customerName">Jane Doe</div>
+                        <div class="detail-value" id="customerName"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Email</div>
-                        <div class="detail-value" id="customerEmail">jane.doe@company.com</div>
+                        <div class="detail-value" id="customerEmail"></div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Contact Number</div>
-                        <div class="detail-value" id="customerPhone">+1 (555) 987-6543</div>
+                        <div class="detail-value" id="customerPhone"></div>
                     </div>
                 </div>
 
@@ -458,15 +458,15 @@
                     <h3 class="section-title">Current Staff Working On</h3>
                     <div class="detail-item">
                         <div class="detail-label">Username</div>
-                        <div class="detail-value" id="currentStaffUsername">john_tech</div>
+                        <div class="detail-value" id="currentStaffUsername"></div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">User ID</div>
-                        <div class="detail-value" id="currentStaffId">ST001</div>
+                        <div class="detail-label">Staff Email</div>
+                        <div class="detail-value" id="currentStaffEmail"></div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">Email/Contact</div>
-                        <div class="detail-value" id="currentStaffContact">john.tech@company.com</div>
+                        <div class="detail-label">Contact</div>
+                        <div class="detail-value" id="currentStaffContact"></div>
                     </div>
                 </div>
             </div>
@@ -527,7 +527,7 @@
                         </tbody>
                     </table>
                     <div style="margin-top: 15px;">
-                        <button type="button" class="btn-mod btn-save" id="downloadAllBtn" onclick="downloadAllAttachments()" disabled>
+                        <button type="button" class="btn-mod btn-save" id="downloadAllBtn" onclick="downloadAllAttachments()">
                             📥 Download All Files
                         </button>
                     </div>
@@ -537,12 +537,11 @@
             <div class="update-section">
                 <h3 class="section-title">Moderator Actions</h3>
                 <div class="mod-buttons">
-                    <button type="button" class="btn-mod btn-save" onclick="saveTicket()">Save</button>
                     <button type="button" class="btn-mod btn-assign" id="assignBtn" onclick="assignTicket()" disabled>Assign</button>
-                    <button type="button" class="btn-mod btn-send-upper" onclick="sendToUpper()">Send to Upper</button>
-                    <button type="button" class="btn-mod btn-outsource" onclick="markOutsource()">Mark as Out of Service/Outsource Dependency</button>
-                    <button type="button" class="btn-mod btn-resolved" onclick="markResolved()">Resolved</button>
-                    <button type="button" class="btn-mod btn-close" onclick="closeTicket()">Close</button>
+                    <button type="button" class="btn-mod btn-send-upper" onclick="changeStatus('to_upper_level')">Send to Upper</button>
+                    <button type="button" class="btn-mod btn-outsource" onclick="changeStatus('out_of_service/outsource_dependency')">Mark as Out of Service/Outsource Dependency</button>
+                    <button type="button" class="btn-mod btn-resolved" onclick="changeStatus('Resolved')">Resolved</button>
+                    <button type="button" class="btn-mod btn-close" onclick="changeStatus('Closed')">Close</button>
                 </div>
 
                 <h3 class="section-title">Update Messages</h3>
@@ -569,6 +568,11 @@
                             placeholder="Enter developer notes and updates..."
                         ></textarea>
                     </div>
+                     <div class="action-buttons">
+            <button type="submit" class="btn btn-primary" id="saveBtn">
+                Save Updates
+                   </button>
+                  </div>
                 </form>
             </div>
         </div>
@@ -577,10 +581,11 @@
     <script>
         let selectedStaff = null;
 
-        const ticketId = "{{ ticket_id }}";
+        const ticketId = {{ ticket_id }};
 
         document.addEventListener('DOMContentLoaded', function() {
             loadTicketData();
+            loadAttachments();
             loadStaffData();
         });
 
@@ -636,25 +641,24 @@
             }
         }
 
-        function displayAttachments(attachments) {
+         function displayAttachments(attachments) {
             const tableBody = document.getElementById('attachmentsTableBody');
-            const downloadBtn = document.getElementById('downloadAllBtn');
             
             if (attachments.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #718096; font-style: italic;">No attachments found</td></tr>';
-                downloadBtn.disabled = true;
+                tableBody.innerHTML = '<tr><td colspan="3" class="no-attachments">No attachments found</td></tr>';
+                document.getElementById('downloadAllBtn').style.display = 'none';
                 return;
             }
+
+            document.getElementById('downloadAllBtn').style.display = 'inline-block';
             
             tableBody.innerHTML = attachments.map(attachment => `
                 <tr>
                     <td>${escapeHtml(attachment.filename)}</td>
-                    <td>${escapeHtml(attachment.file_type)}</td>
+                    <td><span class="file-type-badge">${escapeHtml(attachment.file_type)}</span></td>
                     <td>${formatDate(attachment.upload_date)}</td>
                 </tr>
             `).join('');
-            
-            downloadBtn.disabled = false;
         }
 
         async function downloadAllAttachments() {
@@ -699,29 +703,32 @@
         }
 
         function populateTicketData(ticket) {
-            document.getElementById('ticketId').textContent = ticket.id;
-            document.getElementById('ticketTitle').textContent = ticket.title;
-            document.getElementById('ticketType').textContent = ticket.type;
-            document.getElementById('ticketUrgency').textContent = ticket.urgency;
-            document.getElementById('ticketStatus').textContent = ticket.status;
-            document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
-            document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
-            document.getElementById('customerName').textContent = ticket.customer_name || 'Unknown Customer';
-            document.getElementById('customerEmail').textContent = ticket.customer_email || 'N/A';
-            document.getElementById('customerPhone').textContent = ticket.customer_phone || 'N/A';
-            document.getElementById('originalDescription').textContent = ticket.description;
-            document.getElementById('clientMessages').textContent = ticket.client_messages || 'No client messages';
-            document.getElementById('devMessages').textContent = ticket.dev_messages || 'No developer messages';
+    document.getElementById('ticketId').textContent = ticket.id;
+    document.getElementById('ticketTitle').textContent = ticket.title;
+    document.getElementById('ticketType').textContent = ticket.type;
+    document.getElementById('ticketUrgency').textContent = ticket.urgency;
+    document.getElementById('ticketStatus').textContent = ticket.status;
+    document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
+    document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
+    
+    // Fix customer information mapping
+    document.getElementById('customerName').textContent = ticket.reporter_username || 'Unknown Customer';
+    document.getElementById('customerEmail').textContent = ticket.user_email || 'N/A';
+    document.getElementById('customerPhone').textContent = ticket.user_number || 'N/A';
+    
+    document.getElementById('originalDescription').textContent = ticket.description;
+    document.getElementById('clientMessages').textContent = ticket.client_messages || 'No client messages';
+    document.getElementById('devMessages').textContent = ticket.dev_messages || 'No developer messages';
 
-            document.getElementById('currentStaffUsername').textContent = ticket.current_staff_username || 'Unassigned';
-            document.getElementById('currentStaffId').textContent = ticket.current_staff_id || 'N/A';
-            document.getElementById('currentStaffContact').textContent = ticket.current_staff_contact || 'N/A';
+    // Fix staff information mapping
+    document.getElementById('currentStaffUsername').textContent = ticket.assigner_username || 'Unassigned';
+    document.getElementById('currentStaffEmail').textContent = ticket.staff_email || 'N/A';
+    document.getElementById('currentStaffContact').textContent = ticket.staff_number || 'N/A';
 
-            updateStatusBadge(ticket.status);
-            updateUrgencyBadge(ticket.urgency);
-            document.getElementById('typeBadge').textContent = ticket.type;
-        }
-
+    updateStatusBadge(ticket.status);
+    updateUrgencyBadge(ticket.urgency);
+    document.getElementById('typeBadge').textContent = ticket.type;
+}
        function updateStatusBadge(status) {
     const badge = document.getElementById('statusBadge');
     
@@ -755,7 +762,10 @@
             return date.toLocaleString();
         }
 
-        async function saveTicket() {
+       // Fix the form submission handler
+document.getElementById('updateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
             const newClientMessage = document.getElementById('newClientMessage').value.trim();
             const newDevMessage = document.getElementById('newDevMessage').value.trim();
             
@@ -764,10 +774,16 @@
                 return;
             }
 
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
             try {
                 const response = await fetch(`/mod/api/tickets/${ticketId}/update`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify({
                         client_message: newClientMessage,
                         dev_message: newDevMessage
@@ -777,70 +793,65 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    showMessage('Ticket saved successfully!', 'success');
+                    showMessage(result.message || 'Updates saved successfully!', 'success');
                     document.getElementById('newClientMessage').value = '';
                     document.getElementById('newDevMessage').value = '';
-                    setTimeout(() => loadTicketData(), 1000);
+                    setTimeout(() => {
+                        loadTicketData();
+                    }, 1000);
                 } else {
-                    showMessage(result.message || 'Failed to save ticket', 'error');
+                    showMessage(result.message || 'Failed to save updates', 'error');
                 }
             } catch (error) {
-                console.error('Error saving ticket:', error);
-                showMessage('Error saving ticket', 'error');
+                console.error('Error saving updates:', error);
+                showMessage('Error saving updates', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Updates';
             }
-        }
+        });
 
-        async function assignTicket() {
-            if (!selectedStaff) {
-                showMessage('Please select a staff member first', 'error');
-                return;
+        // Status change function
+        // Update the changeStatus function in staff_ticket_detail.html
+async function changeStatus(newStatus) {
+    if (!confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/mod/api/tickets/${ticketId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: newStatus
+            })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            showMessage(`Status changed to ${newStatus} successfully!`, 'success');
+            
+            // Redirect for Closed status - FIXED: Redirect to mod main page
+            if (newStatus === 'Closed') {
+                setTimeout(() => {
+                    window.location.href = '/mod/main';  // Changed to mod main
+                }, 1500);
+            } else {
+                loadTicketData(); // Reload to show updated status
             }
-
-            if (!confirm(`Assign this ticket to ${selectedStaff.username}?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/mod/api/tickets/${ticketId}/assign`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ staff_id: selectedStaff.id })
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showMessage(`Ticket assigned to ${selectedStaff.username} successfully!`, 'success');
-                    loadTicketData();
-                } else {
-                    showMessage(result.message || 'Failed to assign ticket', 'error');
-                }
-            } catch (error) {
-                console.error('Error assigning ticket:', error);
-                showMessage('Error assigning ticket', 'error');
-            }
+        } else {
+            showMessage(result.message || 'Failed to change status', 'error');
         }
+    } catch (error) {
+        console.error('Error changing status:', error);
+        showMessage('Error changing status', 'error');
+    }
+}
 
-        async function sendToUpper() {
-            if (!confirm('Send this ticket to upper management?')) return;
-            await updateTicketStatus('Escalated', 'Ticket sent to upper management');
-        }
-
-        async function markOutsource() {
-            if (!confirm('Mark this ticket as out of service/outsource dependency?')) return;
-            await updateTicketStatus('Outsourced', 'Ticket marked as outsource dependency');
-        }
-
-        async function markResolved() {
-            if (!confirm('Mark this ticket as resolved?')) return;
-            await updateTicketStatus('Resolved', 'Ticket marked as resolved');
-        }
-
-        async function closeTicket() {
-            if (!confirm('Close this ticket?')) return;
-            await updateTicketStatus('Closed', 'Ticket closed');
-        }
-
+        
         async function updateTicketStatus(status, message) {
             try {
                 const response = await fetch(`/mod/api/tickets/${ticketId}/status`, {
@@ -873,12 +884,12 @@
                 messageContainer.classList.add('hidden');
             }, 5000);
         }
-        async function loadStaffData() {
+       async function loadStaffData() {
     try {
         const response = await fetch(`/mod/api/tickets/${ticketId}/staff`);
         if (response.ok) {
-            const staffData = await response.json();
-            populateStaffTable(staffData.matching_staff, staffData.all_staff);
+            const staffList = await response.json();
+            populateStaffTable(staffList);
         } else {
             console.error('Failed to load staff data');
             showMessage('Failed to load staff information', 'error');
@@ -889,54 +900,52 @@
     }
 }
 
-function populateStaffTable(matchingStaff, allStaff) {
+
+function populateStaffTable(staffList) {
     const tableBody = document.getElementById('staffTable').querySelector('tbody');
-    
-    // Clear existing rows
-    tableBody.innerHTML = '';
-    
-    // Add matching staff first
-    if (matchingStaff && matchingStaff.length > 0) {
-        matchingStaff.forEach(staff => {
+    tableBody.innerHTML = ''; // Clear old rows
+
+    if (staffList && staffList.length > 0) {
+        staffList.forEach(staff => {
             const workload = getWorkloadLevel(staff.current_assignment_count);
             const row = createStaffRow(staff, workload);
             tableBody.appendChild(row);
         });
-    }
-    
-    // Add all staff as fallback
-    if (allStaff && allStaff.length > 0) {
-        allStaff.forEach(staff => {
-            const workload = getWorkloadLevel(staff.current_assignment_count);
-            const row = createStaffRow(staff, workload);
-            tableBody.appendChild(row);
-        });
-    }
-    
-    if (tableBody.children.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #718096; font-style: italic;">No staff members found</td></tr>';
+    } else {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; color: #718096; font-style: italic;">
+                    No staff members found
+                </td>
+            </tr>`;
     }
 }
 
 function createStaffRow(staff, workload) {
     const row = document.createElement('tr');
+
     row.onclick = () => selectStaff(
-        row, 
-        staff.user_id, 
-        staff.username, 
-        staff.specialty || staff.specialties, 
+        row,
+        staff.user_id,
+        staff.username,
+        staff.specialties || 'No specialty', // backend now always returns "specialties"
         workload
     );
-    
+
     row.innerHTML = `
         <td>${escapeHtml(staff.user_id)}</td>
         <td>${escapeHtml(staff.username)}</td>
-        <td>${escapeHtml(staff.specialty || staff.specialties || 'No specialty')}</td>
-        <td><span class="workload-badge workload-${workload}">${getWorkloadText(staff.current_assignment_count, workload)}</span></td>
+        <td>${escapeHtml(staff.specialties || 'No specialty')}</td>
+        <td>
+            <span class="workload-badge workload-${workload}">
+                ${getWorkloadText(staff.current_assignment_count, workload)}
+            </span>
+        </td>
     `;
-    
+
     return row;
 }
+
 
 function getWorkloadLevel(assignmentCount) {
     if (assignmentCount <= 2) return 'low';

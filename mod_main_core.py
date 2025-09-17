@@ -44,7 +44,7 @@ def mod_main():
         tickets = cursor.fetchall()
 
         return render_template(
-            "user_main.html",
+            "mod_main.html",
             tickets=tickets,
             username=session.get('username')
         )
@@ -66,7 +66,7 @@ def api_assign_ticket(ticket_id):
     if not data or 'staff_id' not in data:
         return jsonify({"message": "Staff ID is required"}), 400
 
-    staff_id = data['staff_id']
+    staff_id = data.get('staff_id','')
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -74,7 +74,7 @@ def api_assign_ticket(ticket_id):
         now = datetime.now()
         
         # Verify staff exists and is actually a staff member
-        cursor.execute("SELECT user_id, username FROM Accounts WHERE user_id = %s AND role = 'Staff'", (staff_id,))
+        cursor.execute("""SELECT user_id, username FROM "Accounts" WHERE user_id = %s AND role = 'Staff'""", (staff_id,))
         staff = cursor.fetchone()
         
         if not staff:
@@ -82,7 +82,7 @@ def api_assign_ticket(ticket_id):
 
         cursor.execute("""
             UPDATE tickets 
-            SET status = 'Assign-in_queue', assigner_id = %s, last_update = %s 
+            SET status = 'Assigned-in_queue', assigner_id = %s, last_update = %s 
             WHERE ticket_id = %s
             RETURNING *
         """, (staff_id, now, ticket_id))
@@ -93,7 +93,7 @@ def api_assign_ticket(ticket_id):
         # Log the transaction
         details = f'Ticket assigned to staff: {staff["username"]} (ID: {staff_id})'
         cursor.execute("""
-            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
         """, (ticket_id, 'assign', session["user_id"], now, details))
 
@@ -112,7 +112,9 @@ def api_change_status(ticket_id):
     if "user_id" not in session or session.get("role") != "Mod":
         return jsonify({"message": "Unauthorized"}), 401
 
+    mod_id = session.get("user_id")
     data = request.get_json()
+    
     if not data or 'status' not in data:
         return jsonify({"message": "Status is required"}), 400
 
@@ -123,34 +125,52 @@ def api_change_status(ticket_id):
     try:
         now = datetime.now()
         
-        # Map frontend status names to database status values
+        # Map frontend status names to your database status values
         status_mapping = {
-            'Escalated': 'On going to upper level',
-            'Outsourced': 'Out of service / outsource requirement',
+            'to_upper_level': 'to_upper_level',
+            'out_of_service/outsource_dependency': 'out_of_service/outsource_dependency',
             'Resolved': 'Resolved',
             'Closed': 'Closed'
         }
         
-        db_status = status_mapping.get(new_status, new_status)
+        db_status = status_mapping.get(new_status)
         
-        cursor.execute("""
-            UPDATE tickets 
-            SET status = %s, last_update = %s 
-            WHERE ticket_id = %s
-            RETURNING *
-        """, (db_status, now, ticket_id))
+        if not db_status:
+            return jsonify({"message": "Invalid status"}), 400
+        
+    
+        if db_status in ['to_upper_level', 'out_of_service/outsource_dependency', 'Resolved', 'Closed']:
+            cursor.execute("""
+                UPDATE tickets 
+                SET status = %s, assigner_id = %s, last_update = %s 
+                WHERE ticket_id = %s
+            """, (db_status, mod_id, now, ticket_id))
+        else:
+            cursor.execute("""
+                UPDATE tickets 
+                SET status = %s, last_update = %s 
+                WHERE ticket_id = %s
+            """, (db_status, now, ticket_id))
 
         if cursor.rowcount == 0:
-            return jsonify({"message": "Ticket not found"}), 404
+            return jsonify({"message": "Ticket not found or status change not allowed"}), 400
 
         # Log the transaction
         cursor.execute("""
-            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'status_change', session["user_id"], now, f'Status changed to {db_status}'))
+        """, (ticket_id, 'status_change_by_mod', mod_id, now, f'Status changed to {new_status}'))
 
         conn.commit()
-        return jsonify({"message": f"Status changed to {new_status} successfully!"}), 200
+        
+        # Return redirect instruction for specific status changes
+        if new_status in ['Closed']:
+            return jsonify({
+                "message": f"Status changed to {new_status} successfully!",
+                "redirect": url_for('mod.mod_main')
+            }), 200
+        else:
+            return jsonify({"message": f"Status changed to {new_status} successfully!"}), 200
 
     except Exception as e:
         conn.rollback()
@@ -159,39 +179,9 @@ def api_change_status(ticket_id):
         cursor.close()
         conn.close()
 
-@mod_bp.route('/api/tickets/<ticket_id>/attachments', methods=['GET'])
-def api_get_attachments(ticket_id):
-    if "user_id" not in session or session.get("role") != "Mod":
-        return jsonify({"message": "Unauthorized"}), 401
-
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    try:
-        cursor.execute("""
-            SELECT id, filename, mime_type as file_type, upload_date
-            FROM ticket_attachments
-            WHERE ticket_id = %s
-            ORDER BY upload_date DESC
-        """, (ticket_id,))
-        attachments = cursor.fetchall()
-
-        # Convert datetime to string for JSON
-        for att in attachments:
-            if isinstance(att["upload_date"], datetime):
-                att["upload_date"] = att["upload_date"].isoformat()
-
-        return jsonify(attachments), 200
-
-    except Exception as e:
-        return jsonify({"message": f"Error fetching attachments: {str(e)}"}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
 @mod_bp.route('/api/tickets/<ticket_id>/attachments/download-all', methods=['GET'])
-def api_download_all_attachments(ticket_id):
-    if "user_id" not in session or session.get("role") != "Mod":
+def download_all_attachments(ticket_id):
+    if "user_id" not in session:
         return jsonify({"message": "Unauthorized"}), 401
 
     conn = get_db_connection()
@@ -208,32 +198,33 @@ def api_download_all_attachments(ticket_id):
         if not attachments:
             return jsonify({"message": "No attachments found"}), 404
 
-        # Your existing download code here (same as staff version)
         zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w") as zipf:
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
             for att in attachments:
-                if att["filedata"]:
+                if att["filedata"]:  # Inline in DB
                     zipf.writestr(att["filename"], att["filedata"])
-                elif att["file_url"]:
-                    try:
-                        bucket_name = "large_file_for_db"
-                        storage_path = "/".join(att["file_url"].split(bucket_name + "/")[1:])
-                        res = supabase.storage.from_(bucket_name).download(storage_path)
-                        if res is not None:
-                            zipf.writestr(att["filename"], res)
-                        else:
-                            zipf.writestr(att["filename"] + ".url.txt",
-                                          f"File could not be retrieved, original URL:\n{att['file_url']}")
-                    except Exception as e:
-                        zipf.writestr(att["filename"] + ".error.txt",
-                                      f"Error fetching from Supabase: {str(e)}")
+                elif att["file_url"]:  # Stored in Supabase
+                      try:
+                           bucket_name, file_path = extract_bucket_and_path(att["file_url"])
+        
+                           # Download file from Supabase
+                           res = supabase.storage.from_(bucket_name).download(file_path)
+                           if res is not None:
+                               zipf.writestr(att["filename"], res)
+                           else:
+                                 zipf.writestr(att["filename"] + ".url.txt", 
+                                    f"File could not be retrieved. Original URL: {att['file_url']}")
+                      except Exception as e:
+                               zipf.writestr(att["filename"] + ".error.txt", 
+                                f"Error downloading file: {str(e)}")
 
         zip_buffer.seek(0)
+
         return send_file(
             zip_buffer,
             mimetype="application/zip",
             as_attachment=True,
-            download_name=f"ticket_attachments_{ticket_id}.zip"
+            download_name=f"ticket_{ticket_id}_attachments.zip"
         )
 
     except Exception as e:
@@ -241,6 +232,7 @@ def api_download_all_attachments(ticket_id):
     finally:
         cursor.close()
         conn.close()
+
 
 @mod_bp.route('/api/tickets/<ticket_id>/staff', methods=['GET'])
 def api_get_matching_staff(ticket_id):
@@ -251,56 +243,50 @@ def api_get_matching_staff(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        # Get ticket type first
-        cursor.execute("SELECT type FROM Tickets WHERE ticket_id = %s", (ticket_id,))
+        # Get ticket type
+        cursor.execute("SELECT type FROM tickets WHERE ticket_id = %s", (ticket_id,))
         ticket = cursor.fetchone()
         
         if not ticket:
             return jsonify({"message": "Ticket not found"}), 404
 
         ticket_type = ticket['type']
-        
-        # Get staff with matching specialties (string comparison)
-        cursor.execute("""
-            SELECT 
-                a.user_id,
-                a.username,
-                s.speciality,
-                COUNT(t2.ticket_id) AS current_assignment_count
-            FROM "Accounts" a
-            JOIN staffSpeciality s ON a.user_id = s.staff_id
-            LEFT JOIN tickets t2 ON a.user_id = t2.assigner_id 
-                AND t2.status NOT IN ('Closed')
-            WHERE a.role = 'Staff'
-              AND LOWER(s.speciality) LIKE LOWER(CONCAT('%%', %s, '%%'))
-            GROUP BY a.user_id, a.username, s.speciality
-            ORDER BY current_assignment_count ASC
-        """, (ticket_type,))
-        
-        matching_staff = cursor.fetchall()
 
-        # Get all staff for fallback
-        cursor.execute("""
-            SELECT 
-                a.user_id,
-                a.username,
-                GROUP_CONCAT(DISTINCT s.speciality) AS specialties,
-                COUNT(t2.ticket_id) AS current_assignment_count
-            FROM "Accounts" a
-            LEFT JOIN staffSpeciality s ON a.user_id = s.staff_id
-            LEFT JOIN tickets t2 ON a.user_id = t2.assigner_id 
-                AND t2.status NOT IN ('Closed')
-            WHERE a.role = 'Staff'
-            GROUP BY a.user_id, a.username
-            ORDER BY current_assignment_count ASC
-        """)
-        
-        all_staff = cursor.fetchall()
+        # If type is "Other" -> fetch ALL staff
+        if ticket_type.lower() == "other":
+            cursor.execute("""
+                SELECT a.user_id,
+                       a.username,
+                       STRING_AGG(DISTINCT s.speciality, ', ') AS specialties,
+                       COUNT(t2.ticket_id) AS current_assignment_count
+                FROM "Accounts" a
+                LEFT JOIN staffspeciality s ON a.user_id = s.user_id
+                LEFT JOIN tickets t2 ON a.user_id = t2.assigner_id 
+                    AND t2.status NOT IN ('Closed')
+                WHERE a.role = 'Staff'
+                GROUP BY a.user_id, a.username
+                ORDER BY current_assignment_count ASC
+            """)
+        else:
+            # Otherwise filter staff by the ticket type
+            cursor.execute("""
+                SELECT a.user_id,
+                       a.username,
+                       STRING_AGG(DISTINCT s.speciality, ', ') AS specialties,
+                       COUNT(t2.ticket_id) AS current_assignment_count
+                FROM "Accounts" a
+                JOIN staffspeciality s ON a.user_id = s.user_id
+                LEFT JOIN tickets t2 ON a.user_id = t2.assigner_id 
+                    AND t2.status NOT IN ('Closed')
+                WHERE a.role = 'Staff'
+                  AND s.speciality LIKE CONCAT('%%', %s, '%%')
+                GROUP BY a.user_id, a.username
+                ORDER BY current_assignment_count ASC
+            """, (ticket_type,))
 
-        return jsonify({
-            "matching_staff": matching_staff,
-            "all_staff": all_staff
-        }), 200
+        staff = cursor.fetchall()
+
+        return jsonify(staff), 200
 
     except Exception as e:
         return jsonify({"message": f"Error fetching staff: {str(e)}"}), 500
@@ -308,18 +294,15 @@ def api_get_matching_staff(ticket_id):
         cursor.close()
         conn.close()
 
+        
 @mod_bp.route("/ticket/<ticket_id>", methods=["GET"])
 def mod_view_ticket(ticket_id):
     if "user_id" not in session or session.get("role") != "Mod":
         flash("Please log in as a moderator to access this page", "error")
         return redirect("/login")
-    
-    # Validate ticket_id
-    if not ticket_id.isdigit():
-        flash("Invalid ticket ID", "error")
-        return redirect(url_for('mod.mod_main'))
 
     return render_template("mod_ticket_view.html", ticket_id=ticket_id)
+
 @mod_bp.route('/reset_filters')
 def reset_filters():
     flash("Filters reset", "info")
@@ -362,10 +345,10 @@ def transaction_history():
         conn.close()
 @mod_bp.route('/api/tickets/<ticket_id>/update', methods=['POST'])
 def api_update_ticket(ticket_id):
-    if "user_id" not in session or session.get("role") != "Staff":
+    if "user_id" not in session or session.get("role") != "Mod":
         return jsonify({"message": "Unauthorized"}), 401
 
-    staff_id = session.get("user_id")
+    mod_id = session.get("user_id")
     data = request.get_json()
     
     if not data:
@@ -375,41 +358,50 @@ def api_update_ticket(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        # Get current ticket to preserve unchanged messages
-        cursor.execute("SELECT client_message, dev_message FROM tickets WHERE ticket_id = %s AND assigner_id = %s", 
-                      (ticket_id, staff_id))
+        # Get current ticket - REMOVE the assigner_id restriction for moderators
+        cursor.execute("SELECT client_message, dev_message FROM tickets WHERE ticket_id = %s", 
+                      (ticket_id,))  # Only one parameter
         current_ticket = cursor.fetchone()
         
         if not current_ticket:
             return jsonify({"message": "Ticket not found"}), 404
 
         # Use new values or keep current ones
-        client_message = data.get('client_message', current_ticket['client_message'])
-        dev_message = data.get('dev_message', current_ticket['dev_message'])
+        client_message = data.get('client_message', '')
+        dev_message = data.get('dev_message', '')
         now = datetime.now()
 
+        # If no new messages provided, keep the existing ones
+        if not client_message:
+            client_message = current_ticket['client_message']
+        if not dev_message:
+            dev_message = current_ticket['dev_message']
+
+        # Update without assigner_id restriction for moderators
         cursor.execute("""
-            UPDATE tickets 
+            UPDATE Tickets 
             SET client_message = %s, dev_message = %s, last_update = %s 
-            WHERE ticket_id = %s AND assigner_id = %s
-        """, (client_message, dev_message, now, ticket_id, staff_id))
+            WHERE ticket_id = %s
+        """, (client_message, dev_message, now, ticket_id))  # Only 4 parameters
         
         # Log the transaction
         cursor.execute("""
-            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_date, details)
+            INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'message_update', staff_id, now, 'Mod updated ticket messages'))
+        """, (ticket_id, 'message_update', mod_id, now, 'Mod updated ticket messages'))
 
         conn.commit()
         return jsonify({"message": "Updates saved successfully!"}), 200
 
     except Exception as e:
         conn.rollback()
+        # Add detailed error logging
+        print(f"Error in api_update_ticket: {str(e)}")
         return jsonify({"message": f"Update failed: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()
-
+        
 @mod_bp.route('/update_account', methods=['POST'])
 def update_account():
     if 'user_id' not in session:
@@ -462,3 +454,144 @@ def update_account():
         conn.close()
     
     return redirect(url_for('mod.mod_main'))
+
+@mod_bp.route('/api/tickets/<ticket_id>', methods=['GET'])
+def api_get_ticket(ticket_id):
+    if 'user_id' not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        # Fetch ticket information - REMOVE the assigner_id restriction
+        cursor.execute("""
+            SELECT t.*, 
+                   ra.username AS reporter_username,
+                   ra.email AS user_email,
+                   ra.contact_number AS user_number,
+                   aa.username AS assigner_username,
+                   aa.email AS staff_email,
+                   aa.contact_number AS staff_number
+            FROM tickets t
+            JOIN "Accounts" ra ON t.reporter_id = ra.user_id
+            LEFT JOIN "Accounts" aa ON t.assigner_id = aa.user_id
+            WHERE t.ticket_id = %s
+        """, (ticket_id,))  # Only one parameter now
+        ticket = cursor.fetchone()
+
+        if not ticket:
+            return jsonify({"message": "Ticket not found"}), 404
+
+        # Fetch attachments for this ticket
+        cursor.execute("""
+            SELECT filename, mime_type, upload_date
+            FROM ticket_attachments
+            WHERE ticket_id = %s
+            ORDER BY upload_date DESC
+        """, (ticket_id,))
+        attachments = cursor.fetchall()
+
+        # Format the response
+        ticket_data = {
+            "id": ticket["ticket_id"],
+            "title": ticket["title"],
+            "description": ticket["description"],
+            "status": ticket["status"],
+            "type": ticket["type"],
+            "urgency": ticket["urgency"],
+            "created_date": ticket["created_date"].isoformat() if ticket["created_date"] else None,
+            "last_update": ticket["last_update"].isoformat() if ticket["last_update"] else None,
+            "reporter_username": ticket["reporter_username"],
+            "user_email": ticket["user_email"],
+            "user_number": ticket["user_number"],
+            "assigner_username": ticket["assigner_username"],
+            "staff_email": ticket["staff_email"],
+            "staff_number": ticket["staff_number"],
+            "client_messages": ticket.get("client_message",""),
+            "dev_messages": ticket.get("dev_message",""),
+            "attachments": [
+                {
+                    "filename": att["filename"],
+                    "filetype": att["mime_type"],
+                    "upload_date": att["upload_date"].isoformat() if att["upload_date"] else None
+                }
+                for att in attachments
+            ]
+        }
+
+        return jsonify(ticket_data)
+        
+    except Exception as e:
+        # Add error logging to help with debugging
+        print(f"Error in api_get_ticket: {str(e)}")
+        return jsonify({"message": f"Error retrieving ticket: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+def extract_bucket_and_path(file_url):
+    """
+    Extract bucket name and file path from Supabase storage URL
+    Example URL: https://xyz.supabase.co/storage/v1/object/public/bucket-name/path/to/file
+    """
+    try:
+        # Remove the protocol and split by '/'
+        parts = file_url.replace("https://", "").replace("http://", "").split('/')
+        
+        # Find the index of 'object' which is part of the Supabase URL structure
+        try:
+            object_index = parts.index('object')
+        except ValueError:
+            # If 'object' is not found, try a different approach
+            # Look for 'storage' which is another common part
+            try:
+                storage_index = parts.index('storage')
+                # The bucket should be after 'public'
+                public_index = parts.index('public', storage_index)
+                if public_index + 1 < len(parts):
+                    bucket_name = parts[public_index + 1]
+                    file_path = '/'.join(parts[public_index + 2:])
+                    return bucket_name, file_path
+            except ValueError:
+                pass
+            
+            # If we can't parse the URL, return defaults
+            return "large_file_for_db", file_url.split('/public/')[-1] if '/public/' in file_url else ""
+        
+        # The bucket should be two parts after 'object'
+        if object_index + 3 < len(parts):
+            bucket_name = parts[object_index + 2]
+            file_path = '/'.join(parts[object_index + 3:])
+            return bucket_name, file_path
+        else:
+            return "large_file_for_db", file_url.split('/public/')[-1] if '/public/' in file_url else ""
+    except Exception as e:
+        print(f"Error parsing URL {file_url}: {str(e)}")
+        return "large_file_for_db", file_url.split('/public/')[-1] if '/public/' in file_url else ""
+
+@mod_bp.route('/api/tickets/<ticket_id>/attachments', methods=['GET'])
+def api_get_attachments(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cursor.execute("""
+            SELECT id, filename, mime_type as file_type, upload_date
+            FROM ticket_attachments
+            WHERE ticket_id = %s
+            ORDER BY upload_date DESC
+        """, (ticket_id,))
+        attachments = cursor.fetchall()
+
+        for att in attachments:
+            if isinstance(att["upload_date"], datetime):
+                att["upload_date"] = att["upload_date"].isoformat()
+
+        return jsonify(attachments), 200
+    except Exception as e:
+        return jsonify({"message": f"Error fetching attachments: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()

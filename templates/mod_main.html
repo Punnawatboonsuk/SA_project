@@ -419,7 +419,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <button class="back-btn" onclick="window.location.href='{{ url_for('mod.transaction_history') }}'">📊 Transaction History</button>
+            <button class="back-btn" onclick="window.location.href='{{ url_for('mod.transaction_history') }}'">📊 Transaction History</button>>
             <button id="settingsBtn" class="settings-btn">
                 <span class="settings-icon">⚙️</span>
                 Account Settings
@@ -446,18 +446,17 @@
 
                 <div class="filter-group">
                     <label for="statusFilter">Status</label>
-                    <select id="statusFilter">
-                        <option value="">All Statuses</option>
-                        <option value="Open">Open</option>
-                        <option value="Assigned-in_queue">Assigned - In Queue</option>
-                        <option value="Assigned-working_on">Assigned - Working On</option>
-                        <option value="pending">Pending</option>
-                        <option value="Reassigning">Reassigning</option>
-                        <option value="out_of_service/outsource_dependency">Out of Service/Outsource Dependency</option>
-                        <option value="to_upper_level">To Upper Level</option>
-                        <option value="Resolved">Resolved</option>
-                        <option value="Closed">Closed</option>
-                    </select>
+                   <select id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="Open">Open</option>
+                            <option value="Assign-in_queue">Assigned - In Queue</option>
+                            <option value="Assign-working_on">Assigned - Working On</option>
+                            <option value="Pending">Pending</option>
+                            <option value="out_of_service/outsource_dependency">Out of Service/Outsource Dependency</option>
+                            <option value="to_upper_level">To Upper Level</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+</select>
                 </div>
 
                 <div class="filter-group">
@@ -593,7 +592,7 @@
                 'Open': 'status-open',
                 'Assigned-in_queue': 'status-assigned-queue',
                 'Assigned-working_on': 'status-assigned-working',
-                'pending': 'status-pending',
+                'Pending': 'status-pending',
                 'Reassigning': 'status-reassigning',
                 'out_of_service/outsource_dependency': 'status-out-of-service',
                 'to_upper_level': 'status-upper-level',
@@ -632,7 +631,7 @@
     }
 
     tbody.innerHTML = filteredTickets.map(ticket => `
-        <tr onclick="window.location.href='/user/ticket/${ticket.ticket_id}'" style="cursor:pointer;">
+        <tr onclick="window.location.href='/mod/ticket/${ticket.ticket_id}'" style="cursor:pointer;">
             <td><strong>${ticket.ticket_id}</strong></td>
             <td>${ticket.title}</td>
             <td>
@@ -648,58 +647,58 @@
             <td>
                 <span class="type-badge">${ticket.type}</span>
             </td>
-            <td>${new Date(ticket.create_date).toLocaleDateString()}</td>
+            <td>${new Date(ticket.created_date).toLocaleDateString()}</td>
             <td>${new Date(ticket.last_update).toLocaleDateString()}</td>
         </tr>
     `).join('');
 }
 
         function applyFilters() {
-            const ticketIdFilter = document.getElementById('ticketIdFilter').value.toLowerCase();
-            const titleFilter = document.getElementById('titleFilter').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            const urgencyFilter = document.getElementById('urgencyFilter').value;
-            const typeFilter = document.getElementById('typeFilter').value;
+    const ticketIdFilter = document.getElementById('ticketIdFilter').value.toLowerCase();
+    const titleFilter = document.getElementById('titleFilter').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const urgencyFilter = document.getElementById('urgencyFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+    
+    const createDateType = document.getElementById('createDateType').value;
+    const createDateValue = document.getElementById('createDateValue').value;
+    const updateDateType = document.getElementById('updateDateType').value;
+    const updateDateValue = document.getElementById('updateDateValue').value;
+
+    filteredTickets = allTickets.filter(ticket => {
+        // Text filters
+        if (ticketIdFilter && !ticket.ticket_id.toString().toLowerCase().includes(ticketIdFilter)) return false;
+        if (titleFilter && !ticket.title.toLowerCase().includes(titleFilter)) return false;
+        
+        // Dropdown filters
+        if (statusFilter && ticket.status !== statusFilter) return false;
+        if (urgencyFilter && ticket.urgency !== urgencyFilter) return false;
+        if (typeFilter && ticket.type !== typeFilter) return false;
+        
+        // Date filters
+        if (createDateType && createDateValue) {
+            const ticketDate = new Date(ticket.created_date);
+            const filterDate = new Date(createDateValue);
             
-            const createDateType = document.getElementById('createDateType').value;
-            const createDateValue = document.getElementById('createDateValue').value;
-            const updateDateType = document.getElementById('updateDateType').value;
-            const updateDateValue = document.getElementById('updateDateValue').value;
-
-            filteredTickets = allTickets.filter(ticket => {
-                // Text filters
-                if (ticketIdFilter && !ticket.id.toLowerCase().includes(ticketIdFilter)) return false;
-                if (titleFilter && !ticket.title.toLowerCase().includes(titleFilter)) return false;
-                
-                // Dropdown filters
-                if (statusFilter && ticket.status !== statusFilter) return false;
-                if (urgencyFilter && ticket.urgency !== urgencyFilter) return false;
-                if (typeFilter && ticket.type !== typeFilter) return false;
-                
-                // Date filters
-                if (createDateType && createDateValue) {
-                    const ticketDate = new Date(ticket.createDate);
-                    const filterDate = new Date(createDateValue);
-                    
-                    if (createDateType === 'specific' && ticketDate.toDateString() !== filterDate.toDateString()) return false;
-                    if (createDateType === 'before' && ticketDate >= filterDate) return false;
-                    if (createDateType === 'after' && ticketDate <= filterDate) return false;
-                }
-                
-                if (updateDateType && updateDateValue) {
-                    const ticketDate = new Date(ticket.lastUpdate);
-                    const filterDate = new Date(updateDateValue);
-                    
-                    if (updateDateType === 'specific' && ticketDate.toDateString() !== filterDate.toDateString()) return false;
-                    if (updateDateType === 'before' && ticketDate >= filterDate) return false;
-                    if (updateDateType === 'after' && ticketDate <= filterDate) return false;
-                }
-                
-                return true;
-            });
-
-            renderTickets();
+            if (createDateType === 'specific' && ticketDate.toDateString() !== filterDate.toDateString()) return false;
+            if (createDateType === 'before' && ticketDate >= filterDate) return false;
+            if (createDateType === 'after' && ticketDate <= filterDate) return false;
         }
+        
+        if (updateDateType && updateDateValue) {
+            const ticketDate = new Date(ticket.last_update);
+            const filterDate = new Date(updateDateValue);
+            
+            if (updateDateType === 'specific' && ticketDate.toDateString() !== filterDate.toDateString()) return false;
+            if (updateDateType === 'before' && ticketDate >= filterDate) return false;
+            if (updateDateType === 'after' && ticketDate <= filterDate) return false;
+        }
+        
+        return true;
+    });
+
+    renderTickets();
+}
 
         function clearFilters() {
             // Clear all filter inputs
