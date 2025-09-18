@@ -181,7 +181,7 @@ def api_update_ticket(ticket_id):
         cursor.execute("""
             INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'message_update', staff_id, now, 'Staff updated ticket messages'))
+        """, (ticket_id, 'update', staff_id, now, 'Staff updated ticket messages'))
 
         conn.commit()
         return jsonify({"message": "Updates saved successfully!"}), 200
@@ -245,7 +245,7 @@ def api_change_status(ticket_id):
         cursor.execute("""
             INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'status_change_by_staff', staff_id, now, f'Status changed to {new_status}'))
+        """, (ticket_id, 'status_change', staff_id, now, f'Status changed to {new_status} by Staff'))
 
         conn.commit()
         

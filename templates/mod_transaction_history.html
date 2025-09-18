@@ -194,8 +194,8 @@
         .action-create { background: #d4edda; color: #155724; }
         .action-update { background: #d1ecf1; color: #0c5460; }
         .action-assign { background: #fff3cd; color: #856404; }
-        .action-resolve { background: #d1ecf1; color: #0c5460; }
-        .action-close { background: #f8d7da; color: #721c24; }
+        .action-status_change { background: #f8d7da; color: #721c24; }
+        .action-reopen { background: #f8d7da; color: #1c1f72; }
 
         .action-by {
             font-weight: 600;
@@ -290,7 +290,7 @@
 
             <div class="action-buttons">
                 <button class="btn btn-primary" onclick="clearAllFilters()">Clear All Filters</button>
-                <a href="mod_main.html" class="btn btn-secondary">Back to Main Page</a>
+                <a href="/mod/main" class="btn btn-secondary">Back to Main Page</a>
             </div>
         </div>
 
@@ -302,69 +302,14 @@
                             <th>Transaction ID</th>
                             <th>Ticket ID</th>
                             <th>Action Type</th>
-                            <th>Action By</th>
+                            <th>Action By (ID)</th>
+                            <th>Action By (Username)</th>
                             <th>Action Date</th>
                             <th>Detail</th>
                         </tr>
                     </thead>
                     <tbody id="transactionTableBody">
                          Sample data 
-                        <tr>
-                            <td class="transaction-id">TXN-2024-001</td>
-                            <td class="ticket-id">TKT-2024-001</td>
-                            <td><span class="action-type action-create">Create</span></td>
-                            <td class="action-by">john.doe</td>
-                            <td class="action-date">2024-01-15 09:30:00</td>
-                            <td class="detail">Ticket created for network connectivity issue</td>
-                        </tr>
-                        <tr>
-                            <td class="transaction-id">TXN-2024-002</td>
-                            <td class="ticket-id">TKT-2024-001</td>
-                            <td><span class="action-type action-assign">Assign</span></td>
-                            <td class="action-by">admin.user</td>
-                            <td class="action-date">2024-01-15 10:15:00</td>
-                            <td class="detail">Ticket assigned to network specialist team</td>
-                        </tr>
-                        <tr>
-                            <td class="transaction-id">TXN-2024-003</td>
-                            <td class="ticket-id">TKT-2024-002</td>
-                            <td><span class="action-type action-create">Create</span></td>
-                            <td class="action-by">jane.smith</td>
-                            <td class="action-date">2024-01-15 11:00:00</td>
-                            <td class="detail">Hardware replacement request submitted</td>
-                        </tr>
-                        <tr>
-                            <td class="transaction-id">TXN-2024-004</td>
-                            <td class="ticket-id">TKT-2024-001</td>
-                            <td><span class="action-type action-update">Update</span></td>
-                            <td class="action-by">tech.support</td>
-                            <td class="action-date">2024-01-15 14:30:00</td>
-                            <td class="detail">Network cable replaced, testing connectivity</td>
-                        </tr>
-                        <tr>
-                            <td class="transaction-id">TXN-2024-005</td>
-                            <td class="ticket-id">TKT-2024-001</td>
-                            <td><span class="action-type action-resolve">Resolve</span></td>
-                            <td class="action-by">tech.support</td>
-                            <td class="action-date">2024-01-15 15:45:00</td>
-                            <td class="detail">Network connectivity restored, issue resolved</td>
-                        </tr>
-                        <tr>
-                            <td class="transaction-id">TXN-2024-006</td>
-                            <td class="ticket-id">TKT-2024-002</td>
-                            <td><span class="action-type action-assign">Assign</span></td>
-                            <td class="action-by">admin.user</td>
-                            <td class="action-date">2024-01-16 08:00:00</td>
-                            <td class="detail">Assigned to hardware maintenance team</td>
-                        </tr>
-                        <tr>
-                            <td class="transaction-id">TXN-2024-007</td>
-                            <td class="ticket-id">TKT-2024-001</td>
-                            <td><span class="action-type action-close">Close</span></td>
-                            <td class="action-by">john.doe</td>
-                            <td class="action-date">2024-01-16 09:00:00</td>
-                            <td class="detail">Ticket closed after user confirmation</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -374,6 +319,63 @@
     <script>
         // Store original table data
         let originalData = [];
+
+
+        document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('/mod/api/transactions');
+        if (response.ok) {
+            const transactions = await response.json();
+            loadTransactionTable(transactions);
+        } else {
+            console.error('Failed to fetch transactions');
+        }
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+    }
+
+    // hook up filters as before
+    document.getElementById('transactionIdFilter').addEventListener('input', applyFilters);
+    document.getElementById('ticketIdFilter').addEventListener('input', applyFilters);
+    document.getElementById('actionTypeFilter').addEventListener('input', applyFilters);
+    document.getElementById('actionByFilter').addEventListener('input', applyFilters);
+    document.getElementById('detailFilter').addEventListener('input', applyFilters);
+    document.getElementById('dateFilterType').addEventListener('change', handleDateFilterChange);
+    document.getElementById('dateFilterValue').addEventListener('change', applyFilters);
+});
+
+function loadTransactionTable(transactions) {
+    const tbody = document.getElementById('transactionTableBody');
+    tbody.innerHTML = '';
+    originalData = [];
+
+    transactions.forEach(tx => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+    <td class="transaction-id">${tx.transaction_id}</td>
+    <td class="ticket-id">${tx.ticket_id}</td>
+    <td><span class="action-type action-${tx.action_type.toLowerCase()}">${tx.action_type}</span></td>
+    <td class="action-by-id">${tx.action_by_id}</td>
+    <td class="action-by-username">${tx.action_by_username || 'Unknown'}</td>
+    <td class="action-date">${tx.action_time}</td>
+    <td class="detail">${tx.detail || ''}</td>
+`;
+
+        tbody.appendChild(row);
+
+        // Save for filtering
+        originalData.push({
+            element: row.cloneNode(true),
+            transactionId: tx.transaction_id,
+            ticketId: tx.ticket_id,
+            actionType: tx.action_type,
+            actionBy: tx.action_by,
+            actionDate: tx.action_time,
+            detail: tx.detail || ''
+        });
+    });
+}
+
         
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
@@ -387,7 +389,7 @@
                     ticketId: cells[1].textContent.trim(),
                     actionType: cells[2].textContent.trim(),
                     actionBy: cells[3].textContent.trim(),
-                    actionDate: cells[4].textContent.trim(),
+                    actionTime: cells[4].textContent.trim(),
                     detail: cells[5].textContent.trim()
                 });
             });
@@ -445,7 +447,9 @@
                 if (filters.actionType && !item.actionType.toLowerCase().includes(filters.actionType)) {
                     showRow = false;
                 }
-                if (filters.actionBy && !item.actionBy.toLowerCase().includes(filters.actionBy)) {
+                if (filters.actionBy &&
+                     !(item.action_by_id.toLowerCase().includes(filters.actionBy) ||
+                       item.action_by_username.toLowerCase().includes(filters.actionBy))) {
                     showRow = false;
                 }
                 if (filters.detail && !item.detail.toLowerCase().includes(filters.detail)) {

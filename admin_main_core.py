@@ -82,39 +82,7 @@ def create_account():
 
     return render_template("admin_account_create.html")
 
-@admin_bp.route('/history', methods=["GET"])
-def transaction_history():
-    if "user_id" not in session or session.get("role") != "Admin":
-        flash("Please log in as a admin to access this page", "error")
-        return redirect("/login")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
-    try:
-       
-        
-        # Build dynamic SQL with filters
-        cursor.execute("""
-            SELECT 
-                th.transaction_id,
-                th.ticket_id,
-                th.action_type,
-                th.action_by,
-                a.username AS action_by_username,
-                th.action_date,
-                th.details
-            FROM transaction_history th
-            LEFT JOIN "Accounts" a ON th.action_by = a.user_id
-        """)
-        transactions = cursor.fetchall()
-        return render_template("admin_transaction_history.html",transactions=transactions)
-    except Exception as e:
-        flash(f"Error retrieving transaction history: {str(e)}", "error")
-        return render_template("admin_transaction_history.html", transactions=[], error=str(e))
-    finally:
-        cursor.close()
-        conn.close()
+
 
 @admin_bp.route("/accounts", methods=["GET"])
 def view_accounts():
@@ -536,3 +504,36 @@ def update_own_account():
         conn.close()
     
     return redirect(url_for('admin.admin_dashboard'))
+@admin_bp.route('/transaction_history')
+def transaction_history_page():
+    if "user_id" not in session or session.get("role") != "Mod":
+        flash("Please log in as moderator to access this page", "error")
+        return redirect("/login")
+    return render_template('mod_transaction_history.html')
+
+@admin_bp.route('/api/transactions', methods=['GET'])
+def api_get_transactions():
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cursor.execute("""
+            SELECT th.transaction_id,
+                   th.ticket_id,
+                   th.action_type,
+                   th.action_by      AS action_by_id,
+                   a.username        AS action_by_username,
+                   th.action_time,
+                   th.detail
+            FROM transaction_history th
+            LEFT JOIN "Accounts" a ON th.action_by = a.user_id
+        """)
+        transactions = cursor.fetchall()
+        return jsonify(transactions), 200
+    except Exception as e:
+        return jsonify({"message": f"Error fetching transactions: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()

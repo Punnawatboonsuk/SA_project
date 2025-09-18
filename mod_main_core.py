@@ -159,7 +159,7 @@ def api_change_status(ticket_id):
         cursor.execute("""
             INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'status_change_by_mod', mod_id, now, f'Status changed to {new_status}'))
+        """, (ticket_id, 'status_change', mod_id, now, f'Status changed to {new_status} by Mod'))
 
         conn.commit()
         
@@ -313,36 +313,40 @@ def back_to_main():
     return redirect(url_for('mod.mod_main'))
 
 
-@mod_bp.route('/history', methods=["GET"])
-def transaction_history():
+@mod_bp.route('/transaction_history')
+def transaction_history_page():
     if "user_id" not in session or session.get("role") != "Mod":
-        flash("Please log in as a moderator to access this page", "error")
+        flash("Please log in as moderator to access this page", "error")
         return redirect("/login")
-    
+    return render_template('mod_transaction_history.html')
+
+@mod_bp.route('/api/transactions', methods=['GET'])
+def api_get_transactions():
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
     try:
         cursor.execute("""
-            SELECT 
-                th.transaction_id,
-                th.ticket_id,
-                th.action_type,
-                th.action_by,
-                a.username AS action_by_username,
-                th.action_time,
-                th.details
+            SELECT th.transaction_id,
+                   th.ticket_id,
+                   th.action_type,
+                   th.action_by      AS action_by_id,
+                   a.username        AS action_by_username,
+                   th.action_time,
+                   th.detail
             FROM transaction_history th
             LEFT JOIN "Accounts" a ON th.action_by = a.user_id
         """)
         transactions = cursor.fetchall()
-        return render_template("mod_history.html",transactions=transactions)
+        return jsonify(transactions), 200
     except Exception as e:
-        flash(f"Error retrieving transaction history: {str(e)}", "error")
-        return render_template("mod_transaction_history.html", transactions=[], error=str(e))
+        return jsonify({"message": f"Error fetching transactions: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()
+    
 @mod_bp.route('/api/tickets/<ticket_id>/update', methods=['POST'])
 def api_update_ticket(ticket_id):
     if "user_id" not in session or session.get("role") != "Mod":

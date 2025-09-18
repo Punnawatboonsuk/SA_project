@@ -204,7 +204,7 @@ def update_ticket(ticket_id):
             cursor.execute("""
                 INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (ticket_id, 'ticket update', session["user_id"], now, 'User updated the ticket'))
+            """, (ticket_id, 'update', session["user_id"], now, 'User updated the ticket attachment or description'))
 
         conn.commit()
         
@@ -251,7 +251,7 @@ def reject_ticket(ticket_id):
         cursor.execute("""
             INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'ticket rejected', session["user_id"], now, 'Ticket rejected by user'))
+        """, (ticket_id, 'reopen', session["user_id"], now, 'Ticket rejected by user and reopened'))
 
         conn.commit()
         return jsonify({"message": "Ticket rejected successfully!"}), 200
@@ -366,7 +366,7 @@ def create_ticket():
                 cursor.execute("""
                     INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (ticket_id, 'ticket created', reporter_id, now, 'Ticket created by user'))
+                """, (ticket_id, 'create', reporter_id, now, 'Ticket created by user'))
 
                 conn.commit()
 
@@ -466,7 +466,7 @@ def upload_ticket_attachment(ticket_id):
         cursor.execute("""
             INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'attachment_upload', session["user_id"], now, f'Uploaded {len(results)} attachments'))
+        """, (ticket_id, 'update', session["user_id"], now, f'User Uploaded new {len(results)} attachments'))
 
         conn.commit()
         return jsonify({"message": "Files uploaded successfully", "attachments": results}), 201
