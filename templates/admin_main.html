@@ -500,11 +500,11 @@
     <div class="container">
         <div class="header">
             <div class="header-nav">
-                <a href="account_create.html" class="nav-btn">
+                <a href="{{ url_for('admin.admin_account_create_page') }}" class="nav-btn">
                     <span>👤</span>
                     Account Create
                 </a>
-                <a href="transaction_history.html" class="nav-btn">
+                <a href="{{ url_for('admin.transaction_history_page') }}" class="nav-btn">
                     <span>📊</span>
                     Transaction
                 </a>
@@ -533,29 +533,38 @@
                 <h2 class="section-title">Ticket Statistics</h2>
                 <div class="stats-grid">
                     <div class="stat-card tickets">
-                        <div class="stat-number">45</div>
+                        <div class="stat-number">{{ ticket_counts.get('Open', 0) }}</div>
                         <div class="stat-label">Open Tickets</div>
                     </div>
                     <div class="stat-card tickets">
-                        <div class="stat-number">23</div>
-                        <div class="stat-label">In Progress</div>
+                        <div class="stat-number">{{ ticket_counts.get('Assigned-in_queue', 0) }}</div>
+                        <div class="stat-label">Assign-in queue</div>
                     </div>
                     <div class="stat-card tickets">
-                        <div class="stat-number">12</div>
+                        <div class="stat-number">{{ ticket_counts.get('Pending', 0) }}</div>
                         <div class="stat-label">Pending</div>
                     </div>
                     <div class="stat-card tickets">
-                        <div class="stat-number">8</div>
-                        <div class="stat-label">On Hold</div>
+                        <div class="stat-number">{{ ticket_counts.get('Assigned-working_on', 0) }}</div>
+                        <div class="stat-label">Assign-working on</div>
                     </div>
                     <div class="stat-card tickets">
-                        <div class="stat-number">156</div>
+                        <div class="stat-number">{{ ticket_counts.get('Resolved', 0) }}</div>
                         <div class="stat-label">Resolved</div>
                     </div>
                     <div class="stat-card tickets">
-                        <div class="stat-number">134</div>
+                        <div class="stat-number">{{ ticket_counts.get('Closed', 0) }}</div>
                         <div class="stat-label">Closed</div>
                     </div>
+                    <div class="stat-card tickets">
+                        <div class="stat-number">{{ ticket_counts.get('out_of_service/outsource_dependency', 0) }}</div>
+                        <div class="stat-label">Out of servie/source_req</div>
+                    </div>
+                    <div class="stat-card tickets">
+                        <div class="stat-number">{{ ticket_counts.get('to_upper_level', 0) }}</div>
+                        <div class="stat-label">To upper level</div>
+                    </div>
+
                 </div>
             </div>
 
@@ -564,21 +573,21 @@
                 <h2 class="section-title">User Role Statistics</h2>
                 <div class="stats-grid">
                     <div class="stat-card roles">
-                        <div class="stat-number">3</div>
+                        <div class="stat-number">{{ role_counts.get('Admin', 0) }}</div>
                         <div class="stat-label">Administrators</div>
                     </div>
                     <div class="stat-card roles">
-                        <div class="stat-number">8</div>
-                        <div class="stat-label">Moderators</div>
-                    </div>
-                    <div class="stat-card roles">
-                        <div class="stat-number">25</div>
-                        <div class="stat-label">Staff Members</div>
-                    </div>
-                    <div class="stat-card roles">
-                        <div class="stat-number">142</div>
-                        <div class="stat-label">Users</div>
-                    </div>
+                       <div class="stat-number">{{ role_counts.get('Mod', 0) }}</div>
+                       <div class="stat-label">Moderators</div>
+                   </div>
+                   <div class="stat-card roles">
+                       <div class="stat-number">{{ role_counts.get('Staff', 0) }}</div>
+                       <div class="stat-label">Staff Members</div>
+                   </div>
+                   <div class="stat-card roles">
+                       <div class="stat-number">{{ role_counts.get('User', 0) }}</div>
+                       <div class="stat-label">Users</div>
+                   </div>
                 </div>
             </div>
 
@@ -628,26 +637,19 @@
                                 <th>Email</th>
                                 <th>Contact Number</th>
                             </tr>
-                         <tbody id="accountsTableBody">
-                              {% for account in accounts %}
-    <tr onclick="editAccount('{{ account.user_id }}')">
-        <td>{{ account.user_id }}</td>
-        <td>{{ account.username }}</td>
-        <td>
-            <span class="role-badge role-{{ account.role.lower() }}">
-                {{ account.role }}
-            </span>
-        </td>
-        <td>
-            <span class="status-badge status-{% if account.active_status %}active{% else %}inactive{% endif %}">
-                {% if account.active_status %}Active{% else %}Inactive{% endif %}
-            </span>
-        </td>
-        <td>{{ account.email or 'N/A' }}</td>
-        <td>{{ account.contact_number or 'N/A' }}</td>
-    </tr>
-    {% endfor %}
-</tbody>
+                         <tbody>
+                                {% for acc in accounts %}
+                         <tr onclick="redirectToAccount('{{ acc.user_id }}')">
+                            <td>{{ acc.user_id }}</td>
+                            <td>{{ acc.username }}</td>
+                            <td>{{ acc.role }}</td>
+                            <td>{{ 'ACTIVE' if acc.account_status == 1 else 'INACTIVE' }}</td>
+                            <td>{{ acc.email }}</td>
+                            <td>{{ acc.contact_number }}</td>
+                         </tr>
+                         {% endfor %}
+                         </tbody>
+
                     </table>
                     <div id="noResults" class="no-results" style="display: none;">
                         No accounts found matching the current filters.
@@ -758,6 +760,10 @@
                     tableBody.appendChild(clonedRow);
                 });
             }
+        }
+
+        function redirectToAccount(userId) {
+          window.location.href = `/admin/account_edit/${userId}`;
         }
 
         // Clear all filters

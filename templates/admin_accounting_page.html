@@ -244,15 +244,18 @@
         <div class="header">
             <h1>Edit Account</h1>
             <p>Modify account details and permissions</p>
-            <a href="admin_main.html" class="back-btn">← Back to Dashboard</a>
+            <a href="/admin/main" class="back-btn">Back to Dashboard</a>
         </div>
 
         <div class="form-container">
             <div class="account-info">
                 <h3>Current Account Information</h3>
-                <p><strong>Account ID:</strong> <span id="currentUserId">Loading...</span></p>
-                <p><strong>Username:</strong> <span id="currentUsername">Loading...</span></p>
-                <p><strong>Role:</strong> <span id="currentRole">Loading...</span></p>
+                <p><strong>Account ID:</strong> <span id="currentUserId"></span></p>
+                <p><strong>Username:</strong> <span id="currentUsername"></span></p>
+                <p><strong>Role:</strong> <span id="currentRole"></span></p>
+                <p><strong>Account Status:</strong> <span id="currentAccountStatus"></span></p>
+                <p><strong>Email:</strong> <span id="currentEmail"></span></p>
+                <p><strong>Contact Number:</strong> <span id="currentContactNumber"></span></p>
             </div>
 
             <form id="editAccountForm">
@@ -264,24 +267,10 @@
                             <input type="text" id="username" name="username" required>
                         </div>
                         <div class="form-group">
-                            <label for="userId">User ID</label>
-                            <input type="text" id="userId" name="userId" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label for="role">Role</label>
-                            <select id="role" name="role" required>
-                                <option value="User">User</option>
-                                <option value="Staff">Staff</option>
-                                <option value="Mod">Moderator</option>
-                                <option value="Admin">Administrator</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
                             <label for="activeStatus">Active Status</label>
                             <select id="activeStatus" name="activeStatus" required>
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>
-                                <option value="Suspended">Suspended</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -338,146 +327,113 @@
                     </div>
                 </div>
 
-                <button type="button" onclick="saveChanges()">Save Changes</button>
+                <button type="button" class="save-btn" onclick="saveChanges()">Save Changes</button>
             </form>
         </div>
     </div>
     <script>
-        async function saveChanges() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const accountId = urlParams.get("userId");
-  if (!accountId) {
-    alert("No account selected");
-    return;
-  }
 
-  // Collect field values
-  const username = document.getElementById("username").value;
-  const email = document.getElementById("email").value;
-  const contactNumber = document.getElementById("contactNumber").value;
-  const role = document.getElementById("role").value;
-  const accountStatus = document.getElementById("accountStatus").value;
-
-  // Collect specialties if Staff
-  let specialties = [];
-  if (role === "Staff") {
-    specialties = Array.from(document.querySelectorAll('input[name="specialties"]:checked'))
-      .map(cb => cb.value);
-  }
-
-  try {
-    const res = await fetch(`/admin/api/update_account/${accountId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: username,
-        email: email,
-        contact_number: contactNumber,
-        role: role,
-        account_status: accountStatus,
-        specialties: specialties
-      })
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      alert("Account updated successfully!");
-    } else {
-      alert("Error updating account: " + data.error);
-    }
-  } catch (err) {
-    console.error("Error updating account:", err);
-    alert("Could not update account.");
-  }
-}
-
-async function loadAccountData() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const accountId = urlParams.get("userId");
-  if (!accountId) return;
-
-  try {
-    const res = await fetch(`/admin/api/get_account/${accountId}`);
-    const account = await res.json();
-
-    if (res.ok) {
-      // Fill text fields
-      document.getElementById("username").value = account.username;
-      document.getElementById("email").value = account.email;
-      document.getElementById("contactNumber").value = account.contact_number;
-      document.getElementById("role").value = account.role;
-      document.getElementById("accountStatus").value = account.account_status;
-
-      // Show specialties section if Staff
-      const section = document.getElementById("specialtiesSection");
-      if (account.role === "Staff") {
-        section.style.display = "block";
-
-        // Pre-check existing specialties
-        account.specialties.forEach(spec => {
-          const checkbox = document.querySelector(`input[name="specialties"][value="${spec}"]`);
-          if (checkbox) checkbox.checked = true;
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAccountData();
+            
         });
-      } else {
-        section.style.display = "none";
-      }
-    } else {
-      alert(account.error || "Failed to load account");
-    }
-  } catch (err) {
-    console.error("Error fetching account:", err);
-    alert("Could not load account details.");
-  }
-}
 
-// Load when page starts
-document.addEventListener("DOMContentLoaded", loadAccountData);
-</script>
+        async function saveChanges() {
+            const pathParts = window.location.pathname.split("/");
+            const accountId = pathParts[pathParts.length - 1];
+            if (!accountId) {
+                alert("No account selected");
+                return;
+            }
 
+            // Collect field values
+            const username = document.getElementById("username").value;
+            const email = document.getElementById("email").value;
+            const contactNumber = document.getElementById("contactNumber").value;
+            const accountStatus = document.getElementById("activeStatus").value;
+            const password = document.getElementById("password").value
 
-    <script>
+            // Collect specialties if Staff
+            let specialties = [];
+            const currentRole = document.getElementById('currentRole').textContent;
+            if (currentRole == "Staff") {
+                specialties = Array.from(document.querySelectorAll('input[name="specialties"]:checked'))
+                    .map(cb => cb.value);
+            }
 
-        // Get account ID from URL parameters
-        function getAccountIdFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('userId') || 'STF001'; // Default to staff for demo
-        }
+            try {
+                const res = await fetch(`/admin/api/update_account/${accountId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        contact_number: contactNumber,
+                        account_status: accountStatus,
+                        role : currentRole ,
+                        new_password : password,
+                        new_specialties: specialties
+                    })
+                });
 
-        // Load account data
-        function loadAccountData() {
-            const accountId = getAccountIdFromUrl();
-            const account = sampleAccounts[accountId];
-
-            if (account) {
-                // Update current info display
-                document.getElementById('currentUserId').textContent = account.userId;
-                document.getElementById('currentUsername').textContent = account.username;
-                document.getElementById('currentRole').textContent = account.role;
-
-                // Populate form fields
-                document.getElementById('userId').value = account.userId;
-                document.getElementById('username').value = account.username;
-                document.getElementById('role').value = account.role;
-                document.getElementById('activeStatus').value = account.activeStatus;
-                document.getElementById('email').value = account.email;
-                document.getElementById('contactNumber').value = account.contactNumber;
-
-                // Show/hide specialty section based on role
-                toggleSpecialtySection(account.role);
-
-                // Load specialties if staff
-                if (account.role === 'Staff' && account.specialties) {
-                    account.specialties.forEach(specialty => {
-                        const checkbox = document.querySelector(`input[value="${specialty}"]`);
-                        if (checkbox) {
-                            checkbox.checked = true;
-                        }
-                    });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("Account updated successfully!");
+                } else {
+                    alert("Error updating account: " + data.error);
                 }
+            } catch (err) {
+                console.error("Error updating account:", err);
+                alert("Could not update account.");
             }
         }
 
-        // Toggle specialty section visibility
+        // Load account data
+        async function loadAccountData() {
+    try {
+        const pathParts = window.location.pathname.split("/");
+        const accountId = pathParts[pathParts.length - 1];
+
+        const res = await fetch(`/admin/api/account_edit/${accountId}`);
+        if (!res.ok) throw new Error("Failed to fetch account data");
+
+        const account = await res.json();
+        toggleSpecialtySection(account.role);
+        
+        // Translate 0/1 -> Active/Inactive
+        const statusLabel = account.account_status == 1 ? "Active" : "Inactive";
+
+        // Fill top section
+        document.getElementById('currentUserId').textContent = account.user_id;
+        document.getElementById('currentUsername').textContent = account.username;
+        document.getElementById('currentRole').textContent = account.role;
+        document.getElementById('currentAccountStatus').textContent = statusLabel;
+        document.getElementById('currentEmail').textContent = account.email || 'N/A';
+        document.getElementById('currentContactNumber').textContent = account.contact_number || 'N/A';
+
+        // Also populate input fields for editing
+        document.getElementById("username").value = account.username;
+        document.getElementById("email").value = account.email;
+        document.getElementById("contactNumber").value = account.contact_number;
+        document.getElementById("activeStatus").value = statusLabel;
+
+        // Staff specialties (checkboxes)
+        if (account.role && account.role.toLowerCase() === 'staff' && account.specialties) {
+            const checkboxes = document.querySelectorAll('#specialtySection input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                // Check if this specialty exists in the account's specialties
+                const isChecked = account.specialties.some(specialty => 
+                    specialty.toLowerCase() === cb.value.toLowerCase()
+                );
+                cb.checked = isChecked;
+            });
+        }
+    } catch (err) {
+        console.error("Error loading account data:", err);
+    }
+}
+        
+    // Toggle specialty section visibility
         function toggleSpecialtySection(role) {
             const specialtySection = document.getElementById('specialtySection');
             if (role === 'Staff') {
@@ -490,54 +446,7 @@ document.addEventListener("DOMContentLoaded", loadAccountData);
             }
         }
 
-        // Handle role change
-        document.getElementById('role').addEventListener('change', function() {
-            toggleSpecialtySection(this.value);
-        });
 
-        // Handle form submission
-        document.getElementById('editAccountForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const accountData = {};
-            
-            // Get basic form data
-            for (let [key, value] of formData.entries()) {
-                if (key !== 'specialties') {
-                    accountData[key] = value;
-                }
-            }
-            
-            // Get specialties if staff role
-            if (accountData.role === 'Staff') {
-                const specialties = [];
-                const checkedBoxes = document.querySelectorAll('input[name="specialties"]:checked');
-                checkedBoxes.forEach(cb => specialties.push(cb.value));
-                accountData.specialties = specialties;
-            }
-            
-            // Remove password if empty
-            if (!accountData.password) {
-                delete accountData.password;
-            }
-            
-            console.log('Account data to save:', accountData);
-            
-            // Show success message
-            alert('Account updated successfully!');
-            
-            // In real implementation, you would send this data to your Flask API
-            // fetch('/api/update-account', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify(accountData)
-            // });
-        });
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', loadAccountData);
     </script>
-
 </body>
 </html>

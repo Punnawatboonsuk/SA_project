@@ -25,157 +25,80 @@ def generate_unique_user_id():
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     while True:
         new_id = str(random.randint(1, 9999999999)).zfill(10)  # e.g., "0000000123"
-        cursor.execute('SELECT user_id FROM "Accounts" WHERE user_id = %s', (new_id))
+        cursor.execute('SELECT user_id FROM "Accounts" WHERE user_id = %s', (new_id,))
         if not cursor.fetchone():  # If no existing ID
             return new_id
 
-@admin_bp.route("/admin_account_create", methods=["GET", "POST"])
+@admin_bp.route('/admin_account_create')
+def admin_account_create_page():
+    if "user_id" not in session or session.get("role") != "Admin":
+        flash("Please log in as moderator to access this page", "error")
+        return redirect("/login")
+    return render_template('admin_account_create.html')
+
+@admin_bp.route("api/create_account", methods=["POST"])
 def create_account():
     if "user_id" not in session or session.get("role") != "Admin":
-        flash("Unauthorized access", "error")
-        return redirect(url_for("login"))
+        return jsonify({"error": "Unauthorized"}), 403
 
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        email = request.form.get("email")
-        contact_number = request.form.get("contactNumber")
-        role = request.form.get("role")
-        specialties = request.form.getlist("specialties")  # multiple checkboxes
+    username = request.form.get("username")
+    password = request.form.get("password")
+    email = request.form.get("email")
+    contact_number = request.form.get("contactNumber")
+    role = request.form.get("role")
+    specialties = request.form.getlist("specialties")  # multiple checkboxes
 
-        # ✅ Generate unique user_id (similar to your ticket_id generator)
-        new_user_id = generate_unique_user_id()
+    # Validate required fields
+    if not all([username, password, email, contact_number, role]):
+        return jsonify({"error": "All fields are required"}), 400
 
-        # ✅ Hash password
-        password_hash = ripbcrypt.hashpw(password, ripbcrypt.gensalt())
+    # ✅ Generate unique user_id
+    new_user_id = generate_unique_user_id()
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+    # ✅ Hash password
+    password_hash = ripbcrypt.hashpw(password.encode('utf-8'), ripbcrypt.gensalt())
 
-        try:
-            # Insert into Accounts
-            cursor.execute("""
-                INSERT INTO "Accounts" (user_id, username, password_hash, role, account_status, email, contact_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (new_user_id, username, password_hash, role, 1, email, contact_number))
-
-            # Insert specialties if Staff
-            if role == "Staff" and specialties:
-                for spec in specialties:
-                    cursor.execute("""
-                        INSERT INTO staffspeciality (user_id, speciality_name)
-                        VALUES (%s, %s)
-                    """, (new_user_id, spec))
-
-            conn.commit()
-            flash("Account created successfully!", "success")
-
-        except Exception as e:
-            conn.rollback()
-            flash(f"Error creating account: {str(e)}", "error")
-
-        finally:
-            cursor.close()
-            conn.close()
-
-        return redirect(url_for("admin.create_account"))
-
-    return render_template("admin_account_create.html")
-
-
-
-@admin_bp.route("/accounts", methods=["GET"])
-def view_accounts():
-    if "user_id" not in session or session.get("role") != "Admin":
-        flash("Please log in as an administrator to access this page", "error")
-        return redirect("/login")
-    
     conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor = conn.cursor()
 
     try:
-        # Get filter values from query parameters
-        user_id = request.args.get("user_id", "")
-        username = request.args.get("username", "")
-        role = request.args.get("role", "")
-        active_status = request.args.get("active_status", "")
-        email = request.args.get("email", "")
-        contact_number = request.args.get("contact_number", "")
-        sort_by = request.args.get("sort_by", "user_id")
-        sort_dir = request.args.get("sort_dir", "asc")
+        # Insert into Accounts
+        cursor.execute("""
+            INSERT INTO "Accounts" (user_id, username, password_hash, role, account_status, email, contact_number)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (new_user_id, username, password_hash, role, 1, email, contact_number))
 
-        # Validate allowed sort fields to avoid SQL injection
-        allowed_sort_fields = ["user_id", "username", "role", "active_status", "email", "contact_number"]
-        if sort_by not in allowed_sort_fields:
-            sort_by = "user_id"
-        if sort_dir.lower() not in ["asc", "desc"]:
-            sort_dir = "asc"
+        # Insert specialties if Staff
+        if role == "Staff" and specialties:
+            for spec in specialties:
+                cursor.execute("""
+                    INSERT INTO staffspeciality (user_id, speciality)
+                    VALUES (%s, %s)
+                """, (new_user_id, spec))
 
-        # Build dynamic SQL with filters
-        query = """
-            SELECT 
-                user_id, username, role, active_status, email, contact_number
-            FROM Accounts
-            WHERE 1=1
-        """
-        params = []
+        conn.commit()
+        return jsonify({"message": "Account created successfully!"}), 201
 
-        if user_id:
-            query += " AND user_id LIKE %s"
-            params.append(f"%{user_id}%")
-
-        if username:
-            query += " AND username LIKE %s"
-            params.append(f"%{username}%")
-
-        if role and role != "all":
-            query += " AND role = %s"
-            params.append(role)
-
-        if active_status and active_status != "all":
-            # Convert string to boolean
-            is_active = active_status == "active"
-            query += " AND active_status = %s"
-            params.append(is_active)
-
-        if email:
-            query += " AND email LIKE %s"
-            params.append(f"%{email}%")
-
-        if contact_number:
-            query += " AND contact_number LIKE %s"
-            params.append(f"%{contact_number}%")
-
-        query += f" ORDER BY {sort_by} {sort_dir.upper()}"
-
-        cursor.execute(query, tuple(params))
-        accounts = cursor.fetchall()
-
-        # Get distinct roles for dropdown
-        cursor.execute("SELECT DISTINCT role FROM Accounts ORDER BY role")
-        roles = [row['role'] for row in cursor.fetchall()]
-
-        return render_template(
-            "admin_accounts.html",
-            accounts=accounts,
-            roles=roles,
-            user_id=user_id,
-            username=username,
-            selected_role=role,
-            selected_status=active_status,
-            email=email,
-            contact_number=contact_number,
-            sort_by=sort_by,
-            sort_dir=sort_dir
-        )
     except Exception as e:
-        flash(f"Error retrieving accounts: {str(e)}", "error")
-        return render_template("admin_accounts.html", accounts=[], error=str(e))
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
     finally:
         cursor.close()
         conn.close()
 
-@admin_bp.route('/account/<user_id>', methods=['GET', 'POST'])
+    
+
+
+@admin_bp.route("/account_edit/<user_id>", methods=["GET"])
+def admin_accounting_page(user_id):
+    if "user_id" not in session or session.get("role") != "Admin":
+        flash("Please log in as a moderator to access this page", "error")
+        return redirect("/login")
+
+    return render_template("admin_accounting_page.html", user_id=user_id)
+
+@admin_bp.route('api/account_edit/<user_id>', methods=['GET', 'POST'])
 def account_detail(user_id):
     if "user_id" not in session or session.get("role") != "Admin":
         flash("Please log in as an administrator to access this page", "error")
@@ -187,7 +110,7 @@ def account_detail(user_id):
     try:
         # Get account details
         cursor.execute(
-            """SELECT user_id, username, role, active_status, email, contact_number, hashed_password, is_banned 
+            """SELECT user_id, username, role, account_status, email, contact_number
             FROM "Accounts" WHERE user_id = %s""",
             (user_id,)
         )
@@ -195,108 +118,36 @@ def account_detail(user_id):
 
         if not account:
             flash("Account not found", "error")
-            return redirect(url_for('admin.view_accounts'))
+            return redirect(url_for('admin.admin_dashboard'))
 
         # Get staff specialties if the account is a staff member
         specialties = []
         if account['role'] == 'Staff':
             cursor.execute("""
-                SELECT tt.type_id, tt.type_name 
-                FROM staffSpeciality ss
-                JOIN TicketType tt ON ss.type_id = tt.type_id
-                WHERE ss.staff_id = %s
+                SELECT speciality 
+                FROM staffspeciality
+                WHERE user_id = %s
             """, (user_id,))
             specialties = cursor.fetchall()
 
-        # Get all ticket types (for specialty selection)
-        cursor.execute("SELECT * FROM TicketType")
-        ticket_types = cursor.fetchall()
-
-        if request.method == 'POST':
-            action = request.form.get("action")
-
-            if action == "save":
-                updates = []
-                params = []
-
-                new_username = request.form.get('username')
-                new_password = request.form.get('password')
-                new_email = request.form.get('email')
-                new_contact_number = request.form.get('contact_number')
-                new_active_status = request.form.get('active_status') == 'true'
-                new_is_banned = request.form.get('is_banned') == 'true'
-                new_specialties = set(request.form.getlist('specialties'))
-
-                # Check each field individually
-                if new_username and new_username != account['username']:
-                    updates.append("username = %s")
-                    params.append(new_username)
-
-                if new_email and new_email != account.get('email'):
-                    updates.append("email = %s")
-                    params.append(new_email)
-
-                if new_contact_number and new_contact_number != account.get('contact_number'):
-                    updates.append("contact_number = %s")
-                    params.append(new_contact_number)
-
-                if new_active_status != account['active_status']:
-                    updates.append("active_status = %s")
-                    params.append(new_active_status)
-
-                if new_is_banned != account['is_banned']:
-                    updates.append("is_banned = %s")
-                    params.append(new_is_banned)
-
-                if new_password:  # only update if provided
-                    hashed_password = ripbcrypt.hashpw(new_password, ripbcrypt.gensalt())
-                    updates.append("hashed_password = %s")
-                    params.append(hashed_password)
-
-                # If there are updates, run the query
-                if updates:
-                    update_query = f"UPDATE Accounts SET {', '.join(updates)} WHERE user_id = %s"
-                    params.append(user_id)
-                    cursor.execute(update_query, tuple(params))
-
-                # Handle staff specialties (only if role is Staff)
-                if account['role'] == 'Staff':
-                    cursor.execute("SELECT type_id FROM StaffSpeciality WHERE staff_id = %s", (user_id,))
-                    current_specialties = {row['type_id'] for row in cursor.fetchall()}
-
-                    to_add = new_specialties - current_specialties
-                    to_remove = current_specialties - new_specialties
-
-                    # Remove deselected specialties
-                    for type_id in to_remove:
-                        cursor.execute(
-                            "DELETE FROM StaffSpeciality WHERE staff_id = %s AND type_id = %s",
-                            (user_id, type_id)
-                        )
-
-                    # Add newly selected specialties
-                    for type_id in to_add:
-                        cursor.execute(
-                            "INSERT INTO StaffSpeciality (staff_id, type_id) VALUES (%s, %s)",
-                            (user_id, type_id)
-                        )
-
-                conn.commit()
-                flash("Account updated successfully", "success")
-                return redirect(url_for('admin.account_detail', user_id=user_id))
-
-        return render_template(
-            "admin_account_detail.html",
-            account=account,
-            specialties=specialties,
-            ticket_types=ticket_types
-        )
+        account_data = {
+            "user_id" : account["user_id"],
+            "username" : account["username"],
+            "role"  : account["role"],
+            "account_status":  account["account_status"],
+            "email" : account["email"],
+            "contact_number" : account["contact_number"],
+            "specialties" : [spec["speciality"] for spec in specialties]
+        }
+        return jsonify(account_data)
     except Exception as e:
-        flash(f"Error accessing account: {str(e)}", "error")
-        return redirect(url_for('admin.view_accounts'))
+        # Add error logging to help with debugging
+        print(f"Error in api_get_ticket: {str(e)}")
+        return jsonify({"message": f"Error retrieving ticket: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()
+
     
 @admin_bp.route("/main", methods=["GET"])
 def admin_dashboard():
@@ -336,6 +187,7 @@ def admin_dashboard():
             SELECT 
                 user_id, username, role, account_status, email, contact_number
             FROM "Accounts"
+            WHERE role NOT IN ('Admin')
             ORDER BY user_id
         """)
         accounts = cursor.fetchall()
@@ -343,7 +195,7 @@ def admin_dashboard():
         return render_template(
             "admin_main.html",
             ticket_counts=ticket_counts,
-            role_counts=role_stats,
+            role_counts={stat['role']: stat['count'] for stat in role_stats},
             accounts=accounts
         )
         
@@ -359,49 +211,6 @@ def admin_dashboard():
 
 
 
-
-@admin_bp.route("/api/get_account/<user_id>", methods=["GET"])
-def get_account(user_id):
-    if "user_id" not in session or session.get("role") != "Admin":
-        return jsonify({"error": "Unauthorized"}), 403
-
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    try:
-        cursor.execute("""
-            SELECT user_id, username, email, contact_number, role, account_status
-            FROM "Accounts"
-            WHERE user_id = %s
-        """, (user_id,))
-        account = cursor.fetchone()
-
-        if not account:
-            return jsonify({"error": "Account not found"}), 404
-
-        # Always send details
-        response = {
-            "user_id": account["user_id"],
-            "username": account["username"],
-            "email": account["email"],
-            "contact_number": account["contact_number"],
-            "role": account["role"],
-            "account_status": account["account_status"],
-            "specialties": []
-        }
-
-        # Only add specialties if Staff
-        if account["role"] == "Staff":
-            cursor.execute("SELECT speciality FROM staffspeciality WHERE user_id = %s", (user_id,))
-            specs = [row["speciality_name"] for row in cursor.fetchall()]
-            response["specialties"] = specs
-
-        return jsonify(response), 200
-
-    finally:
-        cursor.close()
-        conn.close()
-
 # ✅ Update account details
 @admin_bp.route("/api/update_account/<user_id>", methods=["POST"])
 def update_account(user_id):
@@ -413,31 +222,46 @@ def update_account(user_id):
     username = data.get("username")
     email = data.get("email")
     contact_number = data.get("contact_number")
+    new_status = data.get("account_status")
+    account_status = 0 
+    if new_status == "Active" :
+        account_status = 1
+    specialties = data.get("new_specialties", [])
+    password =data.get("new_password")
     role = data.get("role")
-    account_status = int(data.get("account_status", 1))
-    specialties = data.get("specialties", [])
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
+
+        if password != '' :
         # Update the main account fields
-        cursor.execute("""
+             cursor.execute("""
             UPDATE "Accounts"
             SET username = %s,
                 email = %s,
                 contact_number = %s,
-                role = %s,
+                account_status = %s,
+                password_hash = %s
+            WHERE user_id = %s
+        """, (username, email, contact_number, account_status, ripbcrypt.hashpw(password, ripbcrypt.gensalt()) ,user_id))
+        else :
+             cursor.execute("""
+            UPDATE "Accounts"
+            SET username = %s,
+                email = %s,
+                contact_number = %s,
                 account_status = %s
             WHERE user_id = %s
-        """, (username, email, contact_number, role, account_status, user_id))
+        """, (username, email, contact_number, account_status ,user_id))
 
         # Handle specialties only if role = Staff
         cursor.execute("DELETE FROM staffspeciality WHERE user_id = %s", (user_id,))
         if role == "Staff" and specialties:
             for spec in specialties:
                 cursor.execute("""
-                    INSERT INTO staffspeciality (user_id, speciality_name)
+                    INSERT INTO staffspeciality (user_id, speciality)
                     VALUES (%s, %s)
                 """, (user_id, spec))
 
@@ -504,16 +328,17 @@ def update_own_account():
         conn.close()
     
     return redirect(url_for('admin.admin_dashboard'))
+
 @admin_bp.route('/transaction_history')
 def transaction_history_page():
-    if "user_id" not in session or session.get("role") != "Mod":
+    if "user_id" not in session or session.get("role") != "Admin":
         flash("Please log in as moderator to access this page", "error")
         return redirect("/login")
-    return render_template('mod_transaction_history.html')
+    return render_template('admin_transaction_history.html')
 
 @admin_bp.route('/api/transactions', methods=['GET'])
 def api_get_transactions():
-    if "user_id" not in session or session.get("role") != "Mod":
+    if "user_id" not in session or session.get("role") != "Admin":
         return jsonify({"message": "Unauthorized"}), 401
 
     conn = get_db_connection()

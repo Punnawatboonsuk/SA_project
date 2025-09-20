@@ -253,7 +253,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <button class="back-button" onclick="goBackToDashboard()">← Back to Dashboard</button>
+            <a href="/admin/main" class="back btn">Back to Main Page</a>
             <h1>Create New Account</h1>
             <p>Add a new user to the IT ticketing system</p>
         </div>
@@ -390,42 +390,58 @@
             }, 5000);
         }
 
-        function createAccount() {
-            const validation = validateForm();
-            
-            if (!validation.valid) {
-                showWarning(validation.message);
-                return;
-            }
+        async function create_account() {
+    const validation = validateForm();
+    
+    if (!validation.valid) {
+        showWarning(validation.message);
+        return;
+    }
 
-            // Collect form data
-            const formData = {
-                username: document.getElementById('username').value.trim(),
-                password: document.getElementById('password').value.trim(),
-                email: document.getElementById('email').value.trim(),
-                contactNumber: document.getElementById('contactNumber').value.trim(),
-                role: document.getElementById('role').value,
-                specialties: []
-            };
+    // Collect form data
+    const formData = new FormData();
+    formData.append('username', document.getElementById('username').value.trim());
+    formData.append('password', document.getElementById('password').value.trim());
+    formData.append('email', document.getElementById('email').value.trim());
+    formData.append('contactNumber', document.getElementById('contactNumber').value.trim());
+    formData.append('role', document.getElementById('role').value);
 
-            // Collect specialties if role is Staff
-            if (formData.role === 'Staff') {
-                const selectedSpecialties = document.querySelectorAll('input[name="specialties"]:checked');
-                formData.specialties = Array.from(selectedSpecialties).map(cb => cb.value);
-            }
+    // Collect specialties if role is Staff
+    if (document.getElementById('role').value === 'Staff') {
+        const selectedSpecialties = document.querySelectorAll('input[name="specialties"]:checked');
+        selectedSpecialties.forEach(cb => {
+            formData.append('specialties', cb.value);
+        });
+    }
 
-            // Here you would typically send the data to your Flask API
-            console.log('Creating account with data:', formData);
-            
-            // Simulate API call
-            alert('Account created successfully!\n\nUsername: ' + formData.username + '\nRole: ' + formData.role + 
-                  (formData.specialties.length > 0 ? '\nSpecialties: ' + formData.specialties.join(', ') : ''));
-            
+    try {
+        // Send data to backend
+        const response = await fetch('/admin/api/create_account', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.redirected) {
+            // If the backend redirected us, follow the redirect
+            window.location.href = response.url;
+            return;
+        }
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('Account created successfully!');
             // Reset form
             document.getElementById('createAccountForm').reset();
             document.getElementById('specialtyPanel').classList.remove('show');
+        } else {
+            showWarning(result.error || 'Failed to create account');
         }
-
+    } catch (error) {
+        console.error('Error creating account:', error);
+        showWarning('Network error. Please try again.');
+    }
+}
         function goBackToDashboard() {
             window.location.href = 'admin_main.html';
         }
