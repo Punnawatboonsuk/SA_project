@@ -219,11 +219,12 @@
         .action-assign { background: #fff3cd; color: #856404; }
         .action-status_change { background: #f8d7da; color: #721c24; }
         .action-reopen { background: #f8d7da; color: #1c1f72; }
-
+        .action-type_urgency_update {background: #f8d7da; color: #4b1c72;}
         .action-by {
             font-weight: 600;
             color: #495057;
         }
+
 
         .action-date {
             font-family: 'Courier New', monospace;
@@ -342,64 +343,64 @@
     </div>
 
     <script>
-        // Store original table data
-        let originalData = [];
+    // Store original table data
+    let originalData = [];
 
-
-        document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        const response = await fetch('/admin/api/transactions');
-        if (response.ok) {
-            const transactions = await response.json();
-            loadTransactionTable(transactions);
-        } else {
-            console.error('Failed to fetch transactions');
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            const response = await fetch('/admin/api/transactions');
+            if (response.ok) {
+                const transactions = await response.json();
+                loadTransactionTable(transactions);
+            } else {
+                console.error('Failed to fetch transactions');
+            }
+        } catch (error) {
+            console.error('Error fetching transactions:', error);
         }
-    } catch (error) {
-        console.error('Error fetching transactions:', error);
-    }
 
-    // hook up filters as before
-    document.getElementById('transactionIdFilter').addEventListener('input', applyFilters);
-    document.getElementById('ticketIdFilter').addEventListener('input', applyFilters);
-    document.getElementById('actionTypeFilter').addEventListener('input', applyFilters);
-    document.getElementById('actionByFilter').addEventListener('input', applyFilters);
-    document.getElementById('detailFilter').addEventListener('input', applyFilters);
-    document.getElementById('dateFilterType').addEventListener('change', handleDateFilterChange);
-    document.getElementById('dateFilterValue').addEventListener('change', applyFilters);
-});
+        // Set up filter event listeners
+        document.getElementById('transactionIdFilter').addEventListener('input', applyFilters);
+        document.getElementById('ticketIdFilter').addEventListener('input', applyFilters);
+        document.getElementById('actionTypeFilter').addEventListener('input', applyFilters);
+        document.getElementById('actionByFilter').addEventListener('input', applyFilters);
+        document.getElementById('detailFilter').addEventListener('input', applyFilters);
+        document.getElementById('dateFilterType').addEventListener('change', handleDateFilterChange);
+        document.getElementById('dateFilterValue').addEventListener('change', applyFilters);
+    });
 
 function loadTransactionTable(transactions) {
-    const tbody = document.getElementById('transactionTableBody');
-    tbody.innerHTML = '';
-    originalData = [];
+        const tbody = document.getElementById('transactionTableBody');
+        tbody.innerHTML = '';
+        originalData = [];
 
-    transactions.forEach(tx => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-    <td class="transaction-id">${tx.transaction_id}</td>
-    <td class="ticket-id">${tx.ticket_id}</td>
-    <td><span class="action-type action-${tx.action_type.toLowerCase()}">${tx.action_type}</span></td>
-    <td class="action-by-id">${tx.action_by_id}</td>
-    <td class="action-by-username">${tx.action_by_username || 'Unknown'}</td>
-    <td class="action-date">${tx.action_time}</td>
-    <td class="detail">${tx.detail || ''}</td>
-`;
+        transactions.forEach(tx => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="transaction-id">${tx.transaction_id}</td>
+                <td class="ticket-id">${tx.ticket_id}</td>
+                <td><span class="action-type action-${tx.action_type.toLowerCase()}">${tx.action_type}</span></td>
+                <td class="action-by-id">${tx.action_by_id}</td>
+                <td class="action-by-username">${tx.action_by_username || 'Unknown'}</td>
+                <td class="action-date">${tx.action_time}</td>
+                <td class="detail">${tx.detail || ''}</td>
+            `;
 
-        tbody.appendChild(row);
+            tbody.appendChild(row);
 
-        // Save for filtering
-        originalData.push({
-            element: row.cloneNode(true),
-            transactionId: tx.transaction_id,
-            ticketId: tx.ticket_id,
-            actionType: tx.action_type,
-            actionBy: tx.action_by,
-            actionDate: tx.action_time,
-            detail: tx.detail || ''
+            // Save for filtering - convert numbers to strings for filtering
+            originalData.push({
+                element: row.cloneNode(true),
+                transactionId: String(tx.transaction_id), // Convert to string for consistent filtering
+                ticketId: String(tx.ticket_id), // Convert to string for consistent filtering
+                actionType: tx.action_type,
+                actionById: String(tx.action_by_id), // Store ID as string
+                actionByUsername: tx.action_by_username || 'Unknown', // Store username
+                actionDate: tx.action_time,
+                detail: tx.detail || ''
+            });
         });
-    });
-}
+    }
 
         
         // Initialize the page
@@ -472,10 +473,16 @@ function loadTransactionTable(transactions) {
                 if (filters.actionType && !item.actionType.toLowerCase().includes(filters.actionType)) {
                     showRow = false;
                 }
-                if (filters.actionBy &&
-                     !(item.action_by_id.toLowerCase().includes(filters.actionBy) ||
-                       item.action_by_username.toLowerCase().includes(filters.actionBy))) {
-                    showRow = false;
+                if (filters.actionBy) {
+                 const filter = filters.actionBy.toLowerCase();
+                 const idMatch = item.actionById.toLowerCase().includes(filter);
+                  const usernameMatch = item.actionByUsername.toLowerCase().includes(filter);
+
+                 // show only if at least one matches
+                  showRow = idMatch || usernameMatch;
+                } else {
+                 // no filter = always show
+                 showRow = true;
                 }
                 if (filters.detail && !item.detail.toLowerCase().includes(filters.detail)) {
                     showRow = false;
@@ -520,23 +527,23 @@ function loadTransactionTable(transactions) {
         }
 
         function clearAllFilters() {
-            // Clear all filter inputs
-            document.getElementById('transactionIdFilter').value = '';
-            document.getElementById('ticketIdFilter').value = '';
-            document.getElementById('actionTypeFilter').value = '';
-            document.getElementById('actionByFilter').value = '';
-            document.getElementById('detailFilter').value = '';
-            document.getElementById('dateFilterType').value = '';
-            document.getElementById('dateFilterValue').value = '';
-            document.getElementById('dateFilterValue').style.display = 'none';
+        // Clear all filter inputs
+        document.getElementById('transactionIdFilter').value = '';
+        document.getElementById('ticketIdFilter').value = '';
+        document.getElementById('actionTypeFilter').value = '';
+        document.getElementById('actionByFilter').value = '';
+        document.getElementById('detailFilter').value = '';
+        document.getElementById('dateFilterType').value = '';
+        document.getElementById('dateFilterValue').value = '';
+        document.getElementById('dateFilterValue').style.display = 'none';
 
-            // Reset table to show all data
-            const tbody = document.getElementById('transactionTableBody');
-            tbody.innerHTML = '';
-            originalData.forEach(item => {
-                tbody.appendChild(item.element.cloneNode(true));
-            });
-        }
+        // Reset table to show all data
+        const tbody = document.getElementById('transactionTableBody');
+        tbody.innerHTML = '';
+        originalData.forEach(item => {
+            tbody.appendChild(item.element.cloneNode(true));
+        });
+    }
     </script>
 </body>
 </html>

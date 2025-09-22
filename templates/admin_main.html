@@ -637,7 +637,8 @@
                                 <th>Email</th>
                                 <th>Contact Number</th>
                             </tr>
-                         <tbody>
+                         </thead>
+                        <tbody id="accountsTableBody">  
                                 {% for acc in accounts %}
                          <tr onclick="redirectToAccount('{{ acc.user_id }}')">
                             <td>{{ acc.user_id }}</td>
