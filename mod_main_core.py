@@ -405,6 +405,67 @@ def api_update_ticket(ticket_id):
     finally:
         cursor.close()
         conn.close()
+
+@mod_bp.route('/api/tickets/<ticket_id>/update2', methods=['POST'])
+def api_update_ticket2(ticket_id):
+    if "user_id" not in session or session.get("role") != "Mod":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    mod_id = session.get("user_id")
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        # Get current ticket
+        cursor.execute("SELECT type, urgency FROM tickets WHERE ticket_id = %s", (ticket_id,))
+        current_ticket = cursor.fetchone()
+        
+        if not current_ticket:
+            return jsonify({"message": "Ticket not found"}), 404
+
+        # Use provided values or keep current ones if not provided
+        new_type = data.get('type', current_ticket['type'])
+        new_urgency = data.get('urgency', current_ticket['urgency'])
+        now = datetime.now()
+
+        # Only update if at least one value is different
+        if new_type != current_ticket['type'] or new_urgency != current_ticket['urgency']:
+
+            if new_type == "" :
+                new_type = current_ticket["type"]
+            if new_urgency == "" :
+                new_urgency = current_ticket["urgency"]
+                
+            cursor.execute("""
+                UPDATE Tickets 
+                SET type = %s, urgency = %s, last_update = %s 
+                WHERE ticket_id = %s
+            """, (new_type, new_urgency, now, ticket_id))
+            
+            # Log the transaction
+            detail = f"Mod updated ticket: type to '{new_type}', urgency to '{new_urgency}'"
+            cursor.execute("""
+                INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ticket_id, 'type_urgency_update', mod_id, now, detail))
+
+            conn.commit()
+            return jsonify({"message": "Type/Urgency updated successfully!"}), 200
+        else:
+            return jsonify({"message": "No changes detected"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Error in api_update_ticket2: {str(e)}")
+        return jsonify({"message": f"Update failed: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
         
 @mod_bp.route('/update_account', methods=['POST'])
 def update_account():

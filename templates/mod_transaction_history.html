@@ -51,13 +51,32 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        .filter-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
+       .filter-section {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
 
+.filter-group.full-width {
+    grid-column: 1 / -1; /* Span all columns */
+}
+@media (max-width: 1200px) {
+    .filter-section {
+        grid-template-columns: repeat(3, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .filter-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .date-filter-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
         .filter-group {
             display: flex;
             flex-direction: column;
@@ -196,7 +215,7 @@
         .action-assign { background: #fff3cd; color: #856404; }
         .action-status_change { background: #f8d7da; color: #721c24; }
         .action-reopen { background: #f8d7da; color: #1c1f72; }
-
+        .action-type_urgency_update {background: #f8d7da; color: #4b1c72;}
         .action-by {
             font-weight: 600;
             color: #495057;
@@ -248,52 +267,54 @@
         </div>
 
         <div class="controls">
-            <div class="filter-section">
-                <div class="filter-group">
-                    <label for="transactionIdFilter">Transaction ID</label>
-                    <input type="text" id="transactionIdFilter" placeholder="Filter by transaction ID...">
-                </div>
-                
-                <div class="filter-group">
-                    <label for="ticketIdFilter">Ticket ID</label>
-                    <input type="text" id="ticketIdFilter" placeholder="Filter by ticket ID...">
-                </div>
-                
-                <div class="filter-group">
-                    <label for="actionTypeFilter">Action Type</label>
-                    <input type="text" id="actionTypeFilter" placeholder="Filter by action type...">
-                </div>
-                
-                <div class="filter-group">
-                    <label for="actionByFilter">Action By</label>
-                    <input type="text" id="actionByFilter" placeholder="Filter by user...">
-                </div>
-                
-                <div class="filter-group">
-                    <label>Action Date</label>
-                    <div class="date-filter-group">
-                        <select id="dateFilterType">
-                            <option value="">All dates</option>
-                            <option value="specific">Specific date</option>
-                            <option value="before">Before date</option>
-                            <option value="after">After date</option>
-                        </select>
-                        <input type="date" id="dateFilterValue" style="display: none;">
-                    </div>
-                </div>
-                
-                <div class="filter-group">
-                    <label for="detailFilter">Detail</label>
-                    <input type="text" id="detailFilter" placeholder="Filter by detail...">
-                </div>
-            </div>
-
-            <div class="action-buttons">
-                <button class="btn btn-primary" onclick="clearAllFilters()">Clear All Filters</button>
-                <a href="/mod/main" class="btn btn-secondary">Back to Main Page</a>
+    <div class="filter-section">
+        <!-- First row with 5 filters -->
+        <div class="filter-group">
+            <label for="transactionIdFilter">Transaction ID</label>
+            <input type="text" id="transactionIdFilter" placeholder="Filter by transaction ID...">
+        </div>
+        
+        <div class="filter-group">
+            <label for="ticketIdFilter">Ticket ID</label>
+            <input type="text" id="ticketIdFilter" placeholder="Filter by ticket ID...">
+        </div>
+        
+        <div class="filter-group">
+            <label for="actionTypeFilter">Action Type</label>
+            <input type="text" id="actionTypeFilter" placeholder="Filter by action type...">
+        </div>
+        
+        <div class="filter-group">
+            <label for="actionByFilter">Action By</label>
+            <input type="text" id="actionByFilter" placeholder="Filter by user...">
+        </div>
+        
+        <div class="filter-group">
+            <label>Action Date</label>
+            <div class="date-filter-group">
+                <select id="dateFilterType">
+                    <option value="">All dates</option>
+                    <option value="specific">Specific date</option>
+                    <option value="before">Before date</option>
+                    <option value="after">After date</option>
+                </select>
+                <input type="date" id="dateFilterValue" style="display: none;">
             </div>
         </div>
+        
+        <!-- Second row with just the detail filter -->
+        <div class="filter-group full-width">
+            <label for="detailFilter">Detail</label>
+            <input type="text" id="detailFilter" placeholder="Filter by detail...">
+        </div>
+    </div>
 
+    <div class="action-buttons">
+        <button class="btn btn-primary" onclick="clearAllFilters()">Clear All Filters</button>
+        <a href="/mod/main" class="btn btn-secondary">Back to Main Page</a>
+    </div>
+
+</div>
         <div class="table-container">
             <div class="table-wrapper">
                 <table id="transactionTable">
