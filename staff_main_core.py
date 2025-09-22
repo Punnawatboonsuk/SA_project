@@ -213,7 +213,7 @@ def api_change_status(ticket_id):
         
         # Map frontend status names to your database status values
         status_mapping = {
-            'In Progress': 'In Progress',
+            'Assigned-working_on': 'Assigned-working_on',
             'Pending': 'Pending',
             'Reassigned': 'Reassigned',
             'Resolved': 'Resolved',

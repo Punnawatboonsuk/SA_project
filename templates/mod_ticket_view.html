@@ -537,7 +537,7 @@
             <div class="update-section">
                 <h3 class="section-title">Moderator Actions</h3>
                 <div class="mod-buttons">
-                    <button type="button" class="btn-mod btn-assign" id="assignBtn" onclick="assignTicket()" disabled>Assign</button>
+                    <button type="button" class="btn-mod btn-assign" id="assignBtn" onclick="assignTicket()">Assign</button>
                     <button type="button" class="btn-mod btn-send-upper" onclick="changeStatus('to_upper_level')">Send to Upper</button>
                     <button type="button" class="btn-mod btn-outsource" onclick="changeStatus('out_of_service/outsource_dependency')">Mark as Out of Service/Outsource Dependency</button>
                     <button type="button" class="btn-mod btn-resolved" onclick="changeStatus('Resolved')">Resolved</button>
@@ -639,6 +639,43 @@
             
             showMessage(`Selected staff: ${username} (${speciality})`, 'success');
         }
+
+       async function assignTicket() {
+    // Case 1: No staff selected
+    if (!selectedStaff || !selectedStaff.id) {
+        showMessage("Please select a staff member before assigning.", "error");
+        return;
+    }
+
+    // Case 2: Confirmation before assigning
+    const confirmAssign = confirm(`Are you sure you want to assign this ticket to ${selectedStaff.username}?`);
+    if (!confirmAssign) {
+        return; // User cancelled
+    }
+
+    try {
+        const response = await fetch(`/mod/api/tickets/${ticketId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ staff_id: selectedStaff.id })
+        });
+
+        if (response.ok) {
+            showMessage(`Ticket successfully assigned to ${selectedStaff.username}`, "success");
+            loadTicketData();
+            loadStaffData(); // refresh staff list/workloads
+
+        } else {
+            const err = await response.json();
+            showMessage(err.message || "Failed to assign ticket", "error");
+        }
+    } catch (error) {
+        console.error("Error assigning ticket:", error);
+        showMessage("Error assigning ticket", "error");
+    }
+}
+
+
 
         async function loadTicketData() {
             try {

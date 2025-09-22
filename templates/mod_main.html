@@ -543,7 +543,13 @@
     <div id="accountModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px);">
         <div class="modal-content">
             <button id="closeModal" class="close-btn">&times;</button>
-            <h3 class="modal-header">Account Settings</h3>
+            <h3 class="modal-header">Account Settings</h3> 
+            
+             <div class="account-info">
+            <p><strong>User ID:</strong> {{ session['user_id'] }}</p>
+            <p><strong>Username:</strong> {{ session['username'] }}</p>
+            </div>
+
             <form id="updateForm" method="POST" action="/mod/update_account">
                 <input type="hidden" name="user_id" value="{{ session['user_id'] }}">
 

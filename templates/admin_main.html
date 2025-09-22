@@ -676,6 +676,11 @@
         <div class="modal-content">
             <button id="closeModal" class="close-btn">&times;</button>
             <h3 class="modal-header">Account Settings</h3>
+             <div class="account-info">
+            <p><strong>User ID:</strong> {{ session['user_id'] }}</p>
+            <p><strong>Username:</strong> {{ session['username'] }}</p>
+            </div>
+
             <form id="updateForm" method="POST" action="/admin/update_own_account">
                 <input type="hidden" name="user_id" value="{{ session['user_id'] }}">
 
