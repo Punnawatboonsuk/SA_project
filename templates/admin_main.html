@@ -800,7 +800,7 @@
         // Edit account function - redirects to admin_account_edit.html
         function editAccount(userId) {
             console.log('[v0] Redirecting to edit account:', userId);
-            window.location.href = `admin_account_edit.html?userId=${encodeURIComponent(userId)}`;
+            window.location.href = `/admin/account_edit/${userId}`;
         }
 
         // Show/hide modal logic

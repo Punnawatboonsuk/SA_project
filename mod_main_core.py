@@ -266,7 +266,7 @@ def api_get_matching_staff(ticket_id):
                 SELECT a.user_id,
                        a.username,
                        STRING_AGG(DISTINCT s.speciality, ', ') AS specialties,
-                       COUNT(t2.ticket_id) AS current_assignment_count
+                       COUNT(DISTINCT t2.ticket_id) AS current_assignment_count
                 FROM "Accounts" a
                 LEFT JOIN staffspeciality s ON a.user_id = s.user_id
                 LEFT JOIN tickets t2 ON a.user_id = t2.assigner_id 
@@ -281,7 +281,7 @@ def api_get_matching_staff(ticket_id):
                 SELECT a.user_id,
                        a.username,
                        STRING_AGG(DISTINCT s.speciality, ', ') AS specialties,
-                       COUNT(t2.ticket_id) AS current_assignment_count
+                       COUNT(DISTINCT t2.ticket_id) AS current_assignment_count
                 FROM "Accounts" a
                 JOIN staffspeciality s ON a.user_id = s.user_id
                 LEFT JOIN tickets t2 ON a.user_id = t2.assigner_id 
