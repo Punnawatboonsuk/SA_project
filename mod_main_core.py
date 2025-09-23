@@ -346,6 +346,7 @@ def api_get_transactions():
                    th.detail
             FROM transaction_history th
             LEFT JOIN "Accounts" a ON th.action_by = a.user_id
+            ORDER BY transaction_id DESC
         """)
         transactions = cursor.fetchall()
 
