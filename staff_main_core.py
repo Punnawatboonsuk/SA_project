@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify
+from zoneinfo import ZoneInfo
 import os
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime , timezone
 import psycopg2
 import psycopg2.extras
 # Load environment variables
@@ -15,6 +16,7 @@ from flask import send_file, redirect
 from supabase import create_client
 import re
 import uuid
+
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -48,6 +50,12 @@ def staff_main():
             ORDER BY t.created_date DESC
         """, (user_id,))
         tickets = cursor.fetchall()
+        bangkok = ZoneInfo("Asia/Bangkok")
+        for t in tickets:
+            if t["created_date"]:
+                t["created_date"] = t["created_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
+            if t["last_update"]:
+                t["last_update"] = t["last_update"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
 
         return render_template(
             "staff_main.html",
@@ -112,6 +120,19 @@ def api_get_ticket(ticket_id):
         """, (ticket_id,))
         attachments = cursor.fetchall()
 
+        bangkok = ZoneInfo("Asia/Bangkok")
+        created_date = ticket["created_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if ticket["created_date"] else None
+        last_update = ticket["last_update"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if ticket["last_update"] else None
+
+        attachments_data = []
+        for att in attachments:
+            upload_date = att["upload_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if att["upload_date"] else None
+            attachments_data.append({
+                "filename": att["filename"],
+                "filetype": att["mime_type"],
+                "upload_date": upload_date
+            })
+
         # Format the response
         ticket_data = {
             "id": ticket["ticket_id"],
@@ -120,21 +141,15 @@ def api_get_ticket(ticket_id):
             "status": ticket["status"],
             "type": ticket["type"],
             "urgency": ticket["urgency"],
-            "created_date": ticket["created_date"].isoformat() if ticket["created_date"] else None,
-            "last_update": ticket["last_update"].isoformat() if ticket["last_update"] else None,
+            "created_date": created_date,
+            "last_update": last_update,
             "reporter_username": ticket["reporter_username"],
             "user_email": ticket["user_email"],
             "user_number": ticket["user_number"],
             "client_messages": ticket.get("client_message",""),
             "dev_messages" : ticket.get("dev_message",""),
-            "attachments": [
-                {
-                    "filename": att["filename"],
-                    "filetype": att["mime_type"],
-                    "upload_date": att["upload_date"].isoformat() if att["upload_date"] else None
-                }
-                for att in attachments
-            ]
+            "attachments": attachments_data
+                
         }
 
         return jsonify(ticket_data)
@@ -169,7 +184,7 @@ def api_update_ticket(ticket_id):
         # Use new values or keep current ones - FIXED: Correct key names
         client_message = data.get('client_message', '') or current_ticket['client_message']
         dev_message = data.get('dev_message', '') or current_ticket['dev_message']
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         cursor.execute("""
             UPDATE Tickets 
@@ -209,7 +224,7 @@ def api_change_status(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         
         # Map frontend status names to your database status values
         status_mapping = {
@@ -230,7 +245,7 @@ def api_change_status(ticket_id):
                 UPDATE tickets 
                 SET status = 'Open', assigner_id = NULL, last_update = %s 
                 WHERE ticket_id = %s AND assigner_id = %s
-            """, (db_status, now, ticket_id, staff_id))
+            """, (now, ticket_id, staff_id))
         else:
             cursor.execute("""
                 UPDATE tickets 
@@ -288,12 +303,11 @@ def api_get_attachments(ticket_id):
             ORDER BY upload_date DESC
         """, (ticket_id,))
         attachments = cursor.fetchall()
-
+        bangkok = ZoneInfo("Asia/Bangkok")
         # Convert datetime to string for JSON
         for att in attachments:
             if isinstance(att["upload_date"], datetime):
-                att["upload_date"] = att["upload_date"].isoformat()
-
+                att["upload_date"] = att["upload_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if att["upload_date"] else None
         return jsonify(attachments), 200
 
     except Exception as e:

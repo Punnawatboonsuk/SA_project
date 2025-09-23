@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, session, redirect, request, url_for, flash, jsonify
+from zoneinfo import ZoneInfo
 import os
 import random
-from datetime import datetime
+from datetime import datetime,timezone
 from dotenv import load_dotenv
 import ripbcrypt
 import psycopg2
@@ -44,6 +45,13 @@ def user_dashboard():
         """, (user_id,))
         tickets = cursor.fetchall()
 
+        bangkok = ZoneInfo("Asia/Bangkok")
+        for t in tickets:
+            if t["created_date"]:
+                t["created_date"] = t["created_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
+            if t["last_update"]:
+                t["last_update"] = t["last_update"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
+
         return render_template(
             "user_main.html",
             tickets=tickets,
@@ -61,6 +69,8 @@ def reset_filters():
 # View Ticket Details
 # View Ticket Details - API version
 # In your api_get_ticket function in user_main_core.py
+from zoneinfo import ZoneInfo   # ✅ NEW import (same as above)
+
 @user_bp.route('/api/tickets/<ticket_id>', methods=['GET'])
 def api_get_ticket(ticket_id):
     if 'user_id' not in session:
@@ -71,7 +81,6 @@ def api_get_ticket(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        # Fetch ticket information
         cursor.execute("""
             SELECT t.*, 
                    ra.username AS reporter_username,
@@ -88,7 +97,6 @@ def api_get_ticket(ticket_id):
         if not ticket:
             return jsonify({"message": "Ticket not found or access denied"}), 404
 
-        # Fetch attachments for this ticket
         cursor.execute("""
             SELECT filename, mime_type, upload_date
             FROM ticket_attachments
@@ -97,7 +105,20 @@ def api_get_ticket(ticket_id):
         """, (ticket_id,))
         attachments = cursor.fetchall()
 
-        # Format the response
+        # ✅ Convert times to Bangkok
+        bangkok = ZoneInfo("Asia/Bangkok")
+        created_date = ticket["created_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if ticket["created_date"] else None
+        last_update = ticket["last_update"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if ticket["last_update"] else None
+
+        attachments_data = []
+        for att in attachments:
+            upload_date = att["upload_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if att["upload_date"] else None
+            attachments_data.append({
+                "filename": att["filename"],
+                "filetype": att["mime_type"],
+                "upload_date": upload_date
+            })
+
         ticket_data = {
             "id": ticket["ticket_id"],
             "title": ticket["title"],
@@ -105,20 +126,13 @@ def api_get_ticket(ticket_id):
             "status": ticket["status"],
             "type": ticket["type"],
             "urgency": ticket["urgency"],
-            "created_date": ticket["created_date"].isoformat() if ticket["created_date"] else None,
-            "last_update": ticket["last_update"].isoformat() if ticket["last_update"] else None,
+            "created_date": created_date,     # ✅ localized
+            "last_update": last_update,       # ✅ localized
             "assigner_username": ticket["assigner_username"],
             "staff_email": ticket["staff_email"],
             "staff_number": ticket["staff_number"],
             "client_messages": ticket.get("client_message", ""),
-            "attachments": [
-                {
-                    "filename": att["filename"],
-                    "filetype": att["mime_type"],
-                    "upload_date": att["upload_date"].isoformat() if att["upload_date"] else None
-                }
-                for att in attachments
-            ]
+            "attachments": attachments_data
         }
 
         return jsonify(ticket_data)
@@ -138,7 +152,7 @@ def update_ticket(ticket_id):
 
     try:
         new_description = request.form.get("description", "").strip()
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         changes_made = False
 
         # Update description only if provided
@@ -239,7 +253,7 @@ def reject_ticket(ticket_id):
         if ticket["status"] != "Resolved":
             return jsonify({"message": "Only resolved tickets can be rejected"}), 400
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Reset ticket status and assigner
         cursor.execute("""
@@ -305,7 +319,7 @@ def create_ticket():
                     if not cursor.fetchone():
                         break
 
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
 
                 # Insert ticket
                 cursor.execute("""
@@ -402,7 +416,7 @@ def upload_ticket_attachment(ticket_id):
         if not files or all(file.filename == '' for file in files):
             return jsonify({"message": "No files selected"}), 400
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         results = []
         
         for file in files:

@@ -220,6 +220,7 @@
         .action-status_change { background: #f8d7da; color: #721c24; }
         .action-reopen { background: #f8d7da; color: #1c1f72; }
         .action-type_urgency_update {background: #f8d7da; color: #4b1c72;}
+        .action-message_update {background: #f8d7da; color: #721c6c;}
         .action-by {
             font-weight: 600;
             color: #495057;
@@ -480,9 +481,6 @@ function loadTransactionTable(transactions) {
 
                  // show only if at least one matches
                   showRow = idMatch || usernameMatch;
-                } else {
-                 // no filter = always show
-                 showRow = true;
                 }
                 if (filters.detail && !item.detail.toLowerCase().includes(filters.detail)) {
                     showRow = false;

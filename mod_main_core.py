@@ -1,6 +1,7 @@
 import os
-from datetime import datetime
+from datetime import datetime,timezone
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify,send_file
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 import psycopg2
 import psycopg2.extras
@@ -43,6 +44,13 @@ def mod_main():
         """)
         tickets = cursor.fetchall()
 
+        bangkok = ZoneInfo("Asia/Bangkok")
+        for t in tickets:
+            if t["created_date"]:
+                t["created_date"] = t["created_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
+            if t["last_update"]:
+                t["last_update"] = t["last_update"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
+
         return render_template(
             "mod_main.html",
             tickets=tickets,
@@ -71,7 +79,7 @@ def api_assign_ticket(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         
         # Verify staff exists and is actually a staff member
         cursor.execute("""SELECT user_id, username FROM "Accounts" WHERE user_id = %s AND role = 'Staff'""", (staff_id,))
@@ -123,7 +131,7 @@ def api_change_status(ticket_id):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         
         # Map frontend status names to your database status values
         status_mapping = {
@@ -340,6 +348,11 @@ def api_get_transactions():
             LEFT JOIN "Accounts" a ON th.action_by = a.user_id
         """)
         transactions = cursor.fetchall()
+
+        bangkok = ZoneInfo("Asia/Bangkok")
+        for t in transactions:
+            if t["action_time"]:
+                t["action_time"] = t["action_time"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
         return jsonify(transactions), 200
     except Exception as e:
         return jsonify({"message": f"Error fetching transactions: {str(e)}"}), 500
@@ -373,7 +386,7 @@ def api_update_ticket(ticket_id):
         # Use new values or keep current ones
         client_message = data.get('client_message', '')
         dev_message = data.get('dev_message', '')
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # If no new messages provided, keep the existing ones
         if not client_message:
@@ -431,7 +444,7 @@ def api_update_ticket2(ticket_id):
         # Use provided values or keep current ones if not provided
         new_type = data.get('type', current_ticket['type'])
         new_urgency = data.get('urgency', current_ticket['urgency'])
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Only update if at least one value is different
         if new_type != current_ticket['type'] or new_urgency != current_ticket['urgency']:
@@ -556,7 +569,18 @@ def api_get_ticket(ticket_id):
             ORDER BY upload_date DESC
         """, (ticket_id,))
         attachments = cursor.fetchall()
+        bangkok = ZoneInfo("Asia/Bangkok")
+        created_date = ticket["created_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if ticket["created_date"] else None
+        last_update = ticket["last_update"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if ticket["last_update"] else None
 
+        attachments_data = []
+        for att in attachments:
+            upload_date = att["upload_date"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M") if att["upload_date"] else None
+            attachments_data.append({
+                "filename": att["filename"],
+                "filetype": att["mime_type"],
+                "upload_date": upload_date
+            })
         # Format the response
         ticket_data = {
             "id": ticket["ticket_id"],
@@ -565,8 +589,8 @@ def api_get_ticket(ticket_id):
             "status": ticket["status"],
             "type": ticket["type"],
             "urgency": ticket["urgency"],
-            "created_date": ticket["created_date"].isoformat() if ticket["created_date"] else None,
-            "last_update": ticket["last_update"].isoformat() if ticket["last_update"] else None,
+            "created_date": created_date,
+            "last_update": last_update,
             "reporter_username": ticket["reporter_username"],
             "user_email": ticket["user_email"],
             "user_number": ticket["user_number"],
@@ -575,14 +599,8 @@ def api_get_ticket(ticket_id):
             "staff_number": ticket["staff_number"],
             "client_messages": ticket.get("client_message",""),
             "dev_messages": ticket.get("dev_message",""),
-            "attachments": [
-                {
-                    "filename": att["filename"],
-                    "filetype": att["mime_type"],
-                    "upload_date": att["upload_date"].isoformat() if att["upload_date"] else None
-                }
-                for att in attachments
-            ]
+            "attachments": attachments_data
+            
         }
 
         return jsonify(ticket_data)

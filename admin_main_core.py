@@ -1,5 +1,6 @@
 import os
-from datetime import datetime
+from datetime import datetime,timezone
+from zoneinfo import ZoneInfo
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash,jsonify
 from dotenv import load_dotenv
 import random
@@ -356,6 +357,10 @@ def api_get_transactions():
             LEFT JOIN "Accounts" a ON th.action_by = a.user_id
         """)
         transactions = cursor.fetchall()
+        bangkok = ZoneInfo("Asia/Bangkok")
+        for t in transactions:
+            if t["action_time"]:
+                t["action_time"] = t["action_time"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
         return jsonify(transactions), 200
     except Exception as e:
         return jsonify({"message": f"Error fetching transactions: {str(e)}"}), 500
