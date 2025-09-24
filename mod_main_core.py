@@ -679,3 +679,26 @@ def api_get_attachments(ticket_id):
     finally:
         cursor.close()
         conn.close()
+@mod_bp.route('/api/account_info', methods=['GET'])
+def api_account_info():
+    if 'user_id' not in session or session.get('role') != 'Mod':
+        return jsonify({"message": "Unauthorized"}), 401
+
+    user_id = session['user_id']
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        cursor.execute(
+            'SELECT username, email, contact_number, role FROM "Accounts" WHERE user_id = %s',
+            (user_id,)
+        )
+        account = cursor.fetchone()
+        if not account:
+            return jsonify({"message": "Account not found"}), 404
+
+        return jsonify(account)
+    finally:
+        cursor.close()
+        conn.close()
+

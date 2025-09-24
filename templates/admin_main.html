@@ -676,12 +676,16 @@
         <div class="modal-content">
             <button id="closeModal" class="close-btn">&times;</button>
             <h3 class="modal-header">Account Settings</h3>
-             <div class="account-info">
-            <p><strong>User ID:</strong> {{ session['user_id'] }}</p>
-            <p><strong>Username:</strong> {{ session['username'] }}</p>
+            <div class="account-info">
+            <p><strong>User ID:</strong> <span id="modalUserId">{{ session['user_id'] }}</span></p>
+            <p><strong>Username:</strong> <span id="modalUsername"></span>{{ session['username'] }}</p>
+            <p><strong>Role:</strong> <span id="modalRole">{{ session['role'] }}</span></p>
+            <p><strong>Email:</strong> <span id="modalEmail"></span></p>
+            <p><strong>Contact Number:</strong> <span id="modalContact"></span></p>
             </div>
 
-            <form id="updateForm" method="POST" action="/admin/update_own_account">
+            <form id="updateForm" method="POST" action="/user/update_account">
+
                 <input type="hidden" name="user_id" value="{{ session['user_id'] }}">
 
                 <label class="form-label">New Username:</label>
@@ -692,6 +696,13 @@
 
                 <label class="form-label">New Password:</label>
                 <input type="password" name="new_password" placeholder="Leave blank to keep current password" class="form-input">
+
+                <label class="form-label">New Email:</label>
+                <input type="email" name="new_email" placeholder="Leave blank to keep current email" class="form-input">
+
+                <label class="form-label">New Contact Number:</label>
+                <input type="text" name="new_contact" placeholder="Leave blank to keep current number" class="form-input">
+
 
                 <button type="submit" class="save-btn">Save Changes</button>
             </form>
@@ -804,13 +815,42 @@
         }
 
         // Show/hide modal logic
-        const modal = document.getElementById('accountModal');
-        const btn = document.getElementById('settingsBtn');
-        const close = document.getElementById('closeModal');
+       document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById("accountModal");
+    const openBtn = document.getElementById("settingsBtn");  // use consistent ID
+    const closeBtn = document.getElementById("closeModal");
 
-        btn.onclick = () => modal.style.display = 'flex';
-        close.onclick = () => modal.style.display = 'none';
-        window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; }
+    // Open modal and fetch data
+    openBtn.addEventListener("click", async () => {
+        modal.style.display = "flex"; // show modal
+        try {
+            const res = await fetch("/admin/api/account_info");
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById("modalUsername").textContent = data.username;
+                document.getElementById("modalRole").textContent = data.role;
+                document.getElementById("modalEmail").textContent = data.email || "N/A";
+                document.getElementById("modalContact").textContent = data.contact_number || "N/A";
+            } else {
+                console.error("Failed to fetch account info");
+            }
+        } catch (err) {
+            console.error("Error fetching account info:", err);
+        }
+    });
+
+    // Close modal with X
+    closeBtn.addEventListener("click", () => {
+        modal.style.display = "none";
+    });
+
+    // Close modal if user clicks outside
+    window.addEventListener("click", (e) => {
+        if (e.target === modal) {
+            modal.style.display = "none";
+        }
+    });
+});
 
         // Add some hover effects and animations
         document.addEventListener('DOMContentLoaded', function() {

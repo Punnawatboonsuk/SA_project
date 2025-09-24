@@ -469,3 +469,25 @@ def extract_bucket_and_path(file_url):
     except Exception as e:
         print(f"Error parsing URL {file_url}: {str(e)}")
         return "large_file_for_db", file_url.split('/public/')[-1] if '/public/' in file_url else ""
+@staff_bp.route('/api/account_info', methods=['GET'])
+def api_account_info():
+    if 'user_id' not in session or session.get('role') != 'Staff':
+        return jsonify({"message": "Unauthorized"}), 401
+
+    user_id = session['user_id']
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        cursor.execute(
+            'SELECT username, email, contact_number, role FROM "Accounts" WHERE user_id = %s',
+            (user_id,)
+        )
+        account = cursor.fetchone()
+        if not account:
+            return jsonify({"message": "Account not found"}), 404
+
+        return jsonify(account)
+    finally:
+        cursor.close()
+        conn.close()

@@ -52,10 +52,16 @@ def user_dashboard():
             if t["last_update"]:
                 t["last_update"] = t["last_update"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
 
+        cursor.execute('SELECT email, contact_number FROM "Accounts" WHERE user_id = %s', (user_id,))
+        account_info = cursor.fetchone()
+
+
         return render_template(
             "user_main.html",
             tickets=tickets,
-            user_id=session.get('user_id')
+            user_id=session.get('user_id'),
+            email=account_info["email"],
+            contact_number=account_info["contact_number"]
         )
     finally:
         cursor.close()
@@ -553,7 +559,31 @@ def download_all_attachments(ticket_id):
     finally:
         cursor.close()
         conn.close()
-   
+
+@user_bp.route('/api/account_info', methods=['GET'])
+def api_account_info():
+    if 'user_id' not in session or session.get('role') != 'User':
+        return jsonify({"message": "Unauthorized"}), 401
+
+    user_id = session['user_id']
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        cursor.execute(
+            'SELECT username, email, contact_number, role FROM "Accounts" WHERE user_id = %s',
+            (user_id,)
+        )
+        account = cursor.fetchone()
+        if not account:
+            return jsonify({"message": "Account not found"}), 404
+
+        return jsonify(account)
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @user_bp.route('/update_account', methods=['POST'])
 def update_account():
     if 'user_id' not in session:
@@ -564,6 +594,8 @@ def update_account():
     current_password = request.form.get('old_password', '').encode('utf-8')
     new_username = request.form.get('new_username', '')
     new_password = request.form.get('new_password', '').encode('utf-8')
+    new_email = request.form.get('new_email', '')
+    new_contact = request.form.get('new_contact', '')
     
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -595,6 +627,15 @@ def update_account():
             cursor.execute('UPDATE "Accounts" SET password_hash = %s WHERE user_id = %s', 
                           (hashed_pw, user_id))
             flash("Password updated successfully", "success")
+        if new_email:
+            cursor.execute('UPDATE "Accounts" SET email = %s WHERE user_id = %s', (new_email, user_id))
+            flash("Email updated successfully", "success")
+
+        # ✅ Contact
+        if new_contact:
+            cursor.execute('UPDATE "Accounts" SET contact_number = %s WHERE user_id = %s', (new_contact, user_id))
+            flash("Contact number updated successfully", "success")
+        
         
         conn.commit()
         
