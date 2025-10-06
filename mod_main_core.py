@@ -406,7 +406,7 @@ def api_update_ticket(ticket_id):
         cursor.execute("""
             INSERT INTO transaction_history (ticket_id, action_type, action_by, action_time, detail)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ticket_id, 'message_update', mod_id, now, 'Mod updated ticket messages'))
+        """, (ticket_id, 'update', mod_id, now, 'Mod updated ticket messages'))
 
         conn.commit()
         return jsonify({"message": "Updates saved successfully!"}), 200
