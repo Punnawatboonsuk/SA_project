@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Ticket - IT Ticketing System</title>
+    <title>User Ticket Details</title>
     <style>
         * {
             margin: 0;
@@ -12,961 +12,1100 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
+            height: 100vh;
+            overflow: hidden;
+            padding: 20px;
+            margin: 0;
         }
 
         .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
         }
 
-        .header h1 {
-            color: #2d3748;
-            font-size: 24px;
-            font-weight: 600;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
         .back-btn {
-            background: #4299e1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
+            padding: 12px 24px;
+            border-radius: 10px;
             font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .back-btn:hover {
-            background: #3182ce;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .ticket-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        .back-btn:active {
+            transform: translateY(0);
         }
 
-        .ticket-header {
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2d3748;
         }
 
         .ticket-id {
             color: #718096;
             font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        .ticket-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 15px;
-        }
-
-        .status-badges {
+            font-weight: 500;
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn {
+            background: #edf2f7;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            color: #4a5568;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .ticket-header {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ticket-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .ticket-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            flex: 1;
         }
 
         .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 14px 28px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            animation: pulse 2s ease-in-out infinite;
+            cursor: default;
+        }
+
+        .badge:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        .status-open { 
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+        .status-assigned-in_queue { 
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+            animation: pulse-progress 1.5s ease-in-out infinite;
+        }
+        .status-assigned-working_on { 
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+        }
+        .status-pending { 
+            background: linear-gradient(135deg, #ecc94b 0%, #d69e2e 100%);
+            color: white;
+        }
+        .status-resolved { 
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+        .status-closed { 
+            background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+            color: white;
+        }
+        
+        @keyframes pulse-progress {
+            0%, 100% { box-shadow: 0 6px 20px rgba(237, 137, 54, 0.3); }
+            50% { box-shadow: 0 8px 30px rgba(237, 137, 54, 0.6); }
+        }
+
+        .priority-critical { 
+            background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+            color: white;
+            font-size: 18px;
+            padding: 16px 32px;
+            animation: pulse-urgent 1s ease-in-out infinite;
+            border: 3px solid #fff;
+        }
+        .priority-high { 
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+            font-size: 17px;
+            padding: 15px 30px;
+        }
+        .priority-medium { 
+            background: linear-gradient(135deg, #ecc94b 0%, #d69e2e 100%);
+            color: white;
+        }
+        .priority-low { 
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        @keyframes pulse-urgent {
+            0%, 100% { 
+                box-shadow: 0 8px 25px rgba(245, 101, 101, 0.5);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 12px 40px rgba(245, 101, 101, 0.8);
+                transform: scale(1.05);
+            }
+        }
+
+        .type-software { background: linear-gradient(135deg, #4299e1 0%, #2b6cb0 100%); color: white; }
+        .type-hardware { background: linear-gradient(135deg, #9f7aea 0%, #6b46c1 100%); color: white; }
+        .type-network { background: linear-gradient(135deg, #38b2ac 0%, #2c7a7b 100%); color: white; }
+        .type-account { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); color: white; }
+        .type-security { background: linear-gradient(135deg, #f56565 0%, #c53030 100%); color: white; }
+        .type-other { background: linear-gradient(135deg, #718096 0%, #4a5568 100%); color: white; }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 0.8fr 1.2fr 1fr;
+            gap: 20px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .left-column::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .left-column::-webkit-scrollbar-track {
+            background: rgba(237, 242, 247, 0.5);
+            border-radius: 10px;
+        }
+
+        .left-column::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
+        }
+
+        .left-column::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        .section {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 10px;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        .info-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .info-grid::-webkit-scrollbar-track {
+            background: #edf2f7;
+            border-radius: 10px;
+        }
+
+        .info-grid::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
+        }
+
+        .info-box {
+            background: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        .info-box:hover {
+            border-left-color: #764ba2;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transform: translateX(3px);
+        }
+
+        .info-label {
+            font-size: 10px;
+            color: #718096;
             font-weight: 600;
+            margin-bottom: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .badge.status-open { background: #c6f6d5; color: #22543d; }
-        .badge.status-in-progress { background: #fed7d7; color: #742a2a; }
-        .badge.status-resolved { background: #bee3f8; color: #2a4365; }
-        .badge.status-closed { background: #e2e8f0; color: #4a5568; }
-
-        .badge.urgency-low { background: #c6f6d5; color: #22543d; }
-        .badge.urgency-medium { background: #feebc8; color: #744210; }
-        .badge.urgency-high { background: #fed7d7; color: #742a2a; }
-        .badge.urgency-critical { background: #fed7d7; color: #742a2a; }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .detail-section {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 20px;
-        }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: 600;
+        .info-value {
+            font-size: 14px;
             color: #2d3748;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #4299e1;
-            padding-bottom: 5px;
-        }
-
-        .detail-item {
-            margin-bottom: 12px;
-        }
-
-        .detail-label {
             font-weight: 600;
+            word-wrap: break-word;
+        }
+
+        .text-viewer {
+            background: white;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 13px;
             color: #4a5568;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-
-        .detail-value {
-            color: #2d3748;
-            font-size: 16px;
-        }
-
-        .description-section {
-            margin-bottom: 30px;
-        }
-
-        .description-box {
-            background: #f7fafc;
+            line-height: 1.8;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            min-height: 120px;
-            font-size: 16px;
-            line-height: 1.6;
-            color: #2d3748;
+            white-space: pre-wrap;
         }
 
-        .attachments-section {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
+        .text-viewer::-webkit-scrollbar {
+            width: 6px;
         }
 
-        .attachments-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }
-
-        .attachments-table th,
-        .attachments-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .attachments-table th {
+        .text-viewer::-webkit-scrollbar-track {
             background: #edf2f7;
-            font-weight: 600;
-            color: #2d3748;
+            border-radius: 10px;
         }
 
-        .attachments-table tr:hover {
-            background: #f7fafc;
-        }
-
-        .download-all-btn {
-            background: #38a169;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-
-        .download-all-btn:hover {
-            background: #2f855a;
-            transform: translateY(-1px);
-        }
-
-        .file-upload-area {
-            border: 2px dashed #cbd5e0;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 15px;
-            transition: border-color 0.2s ease;
-        }
-
-        .file-upload-area:hover {
-            border-color: #4299e1;
-        }
-
-        .file-upload-area.dragover {
-            border-color: #4299e1;
-            background: #ebf8ff;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .upload-btn {
-            background: #4299e1;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-
-        .upload-btn:hover {
-            background: #3182ce;
+        .text-viewer::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
         }
 
         .file-list {
-            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .file-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .file-list::-webkit-scrollbar-track {
+            background: #edf2f7;
+            border-radius: 10px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
         }
 
         .file-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
             background: white;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
             border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            margin-bottom: 8px;
+        }
+
+        .file-item:hover {
+            background: #f7fafc;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-color: #667eea;
+        }
+
+        .file-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
         }
 
         .file-info {
-            display: flex;
-            flex-direction: column;
+            flex: 1;
+            min-width: 0;
         }
 
         .file-name {
-            font-weight: 500;
+            font-size: 13px;
             color: #2d3748;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .file-size {
-            font-size: 12px;
+            font-size: 11px;
             color: #718096;
+            margin-top: 2px;
         }
 
-        .remove-file-btn {
-            background: #e53e3e;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .remove-file-btn:hover {
-            background: #c53030;
-        }
-
-        .update-section {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-
-        .form-textarea {
-            width: 100%;
-            min-height: 120px;
-            padding: 12px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 16px;
-            font-family: inherit;
-            resize: vertical;
-            transition: border-color 0.2s ease;
-        }
-
-        .form-textarea:focus {
-            outline: none;
-            border-color: #4299e1;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
+        .file-download {
+            font-size: 18px;
+            color: #667eea;
             transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
         }
 
-        .btn-primary {
-            background: #4299e1;
-            color: white;
+        .file-item:hover .file-download {
+            transform: scale(1.2);
         }
 
-        .btn-primary:hover {
-            background: #3182ce;
-            transform: translateY(-1px);
-        }
-
-        .btn-danger {
-            background: #e53e3e;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c53030;
-            transform: translateY(-1px);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .loading {
-            opacity: 0.7;
-        }
-
-        .message {
-            padding: 12px 16px;
+        .file-upload {
+            background: white;
+            padding: 20px;
             border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 500;
+            border: 2px dashed #cbd5e0;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 12px;
         }
 
-        .message.success {
-            background: #c6f6d5;
-            color: #22543d;
-            border: 1px solid #9ae6b4;
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+            transform: scale(1.02);
         }
 
-        .message.error {
-            background: #fed7d7;
-            color: #742a2a;
-            border: 1px solid #feb2b2;
-        }
-
-        .message.hidden {
+        .file-upload input {
             display: none;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
+        .upload-label {
+            font-size: 13px;
+            color: #4a5568;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 
-            .header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
+        .upload-icon {
+            font-size: 20px;
+        }
 
-            .details-grid {
-                grid-template-columns: 1fr;
-            }
+        textarea {
+            width: 100%;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 13px;
+            color: #2d3748;
+            resize: none;
+            flex: 1;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 0;
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
 
-            .action-buttons {
-                flex-direction: column;
-            }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
 
-            .btn {
-                width: 100%;
-            }
+        textarea::placeholder {
+            color: #a0aec0;
+        }
 
-            .attachments-table {
-                font-size: 14px;
-            }
+        .char-counter {
+            font-size: 11px;
+            color: #718096;
+            text-align: right;
+            margin-top: 4px;
+        }
 
-            .attachments-table th,
-            .attachments-table td {
-                padding: 8px;
+        .save-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+        }
+
+        .save-btn:active {
+            transform: translateY(0);
+        }
+
+        .save-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .reject-btn {
+            background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(245, 101, 101, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .reject-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 20px;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
             }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.show {
+            display: flex;
+        }
+
+        .notification.success {
+            border-left: 4px solid #48bb78;
+        }
+
+        .notification.error {
+            border-left: 4px solid #f56565;
+        }
+
+        .download-all-btn {
+            background: linear-gradient(135deg, #38b2ac 0%, #2c7a7b 100%);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .download-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(56, 178, 172, 0.3);
+        }
+
+        .ticket-info-section {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .staff-info-section {
+            flex: 0.8;
+            min-height: 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Ticket Details</h1>
-            <a href="/user/main" class="back-btn">← Back to Dashboard</a>
+            <div class="header-left">
+                <button class="back-btn" onclick="window.location.href='/user/main'">
+                    <span>←</span>
+                    <span>Back to Dashboard</span>
+                </button>
+                <div>
+                    <div class="title">User Ticket Details</div>
+                    <div class="ticket-id">
+                        Ticket ID: #<span id="ticketIdDisplay"></span>
+                        <button class="copy-btn" onclick="copyTicketId()">📋 Copy</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="ticket-container">
-            <div class="ticket-header">
-                <div class="ticket-id">Ticket #<span id="ticketId"></span></div>
-                <h2 class="ticket-title" id="ticketTitle"></h2>
-                <div class="status-badges">
-                    <span class="badge status-open" id="statusBadge"></span>
-                    <span class="badge urgency-high" id="urgencyBadge"></span>
-                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;"></span>
+        <div class="ticket-header">
+            <div class="ticket-name" id="ticketTitle">Loading...</div>
+            <span class="badge" id="statusBadge">Loading</span>
+            <span class="badge" id="urgencyBadge">Loading</span>
+            <span class="badge" id="typeBadge">Loading</span>
+        </div>
+
+        <div class="main-content">
+            <!-- Left Column -->
+            <div class="left-column">
+                <div class="section ticket-info-section">
+                    <div class="section-title">Ticket Information</div>
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-label">Type</div>
+                            <div class="info-value" id="infoType">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Priority</div>
+                            <div class="info-value" id="infoPriority">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Status</div>
+                            <div class="info-value" id="infoStatus">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Create Date</div>
+                            <div class="info-value" id="infoCreateDate">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Last Update</div>
+                            <div class="info-value" id="infoLastUpdate">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section staff-info-section">
+                    <div class="section-title">IT Support Assigned</div>
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-label">Staff Name</div>
+                            <div class="info-value" id="staffName">Not assigned</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Staff Email</div>
+                            <div class="info-value" id="staffEmail">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Contact Number</div>
+                            <div class="info-value" id="staffPhone">-</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="details-grid">
-                <div class="detail-section">
-                    <h3 class="section-title">Ticket Information</h3>
-                    <div class="detail-item">
-                        <div class="detail-label">Type</div>
-                        <div class="detail-value" id="ticketType"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Urgency</div>
-                        <div class="detail-value" id="ticketUrgency"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value" id="ticketStatus"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Created Date</div>
-                        <div class="detail-value" id="createdDate"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Last Update</div>
-                        <div class="detail-value" id="lastUpdate"></div>
-                    </div>
+            <!-- Middle Column -->
+            <div class="left-column">
+                <div class="section" style="flex: 1;">
+                    <div class="section-title">Original Description</div>
+                    <div class="text-viewer" id="originalDescription">Loading...</div>
                 </div>
 
-                <div class="detail-section">
-                    <h3 class="section-title">IT Support Assigned</h3>
-                    <div class="detail-item">
-                        <div class="detail-label">Name</div>
-                        <div class="detail-value" id="supportName"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Email</div>
-                        <div class="detail-value" id="supportEmail"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Contact Number</div>
-                        <div class="detail-value" id="supportPhone"></div>
-                    </div>
+                <div class="section" style="flex: 1;">
+                    <div class="section-title">Client Messages</div>
+                    <div class="text-viewer" id="clientMessages">No messages yet</div>
                 </div>
             </div>
 
-            <div class="description-section">
-                <h3 class="section-title">Original Description</h3>
-                <div class="description-box" id="originalDescription">
-            </div>
-
-            <div class="description-section">
-                <h3 class="section-title">Client Messages</h3>
-                <div class="description-box" id="clientMessages">
-                </div>
-            </div>
-
-            <div class="attachments-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 class="section-title" style="margin-bottom: 0;">Attachments</h3>
-                    <button type="button" class="download-all-btn" id="downloadAllBtn">
+            <!-- Right Column -->
+            <div class="left-column">
+                <div class="section" style="flex: 1;">
+                    <div class="section-title">Attachments</div>
+                    <button class="download-all-btn" id="downloadAllBtn" style="display: none;">
                         📥 Download All Files
                     </button>
-                </div>
-                
-                <table class="attachments-table" id="attachmentsTable">
-                    <thead>
-                        <tr>
-                            <th>Filename</th>
-                            <th>File Type</th>
-                            <th>Upload Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attachmentsTableBody">
-                        <!-- Attachments will be loaded here from backend -->
-                    </tbody>
-                </table>
-                
-                <div id="noAttachments" style="text-align: center; color: #718096; padding: 20px;">
-                    No attachments found for this ticket.
-                </div>
-            </div>
+                    <div class="file-list" id="fileList">
+                        <div style="text-align: center; color: #718096; padding: 20px;">
+                            No attachments
+                        </div>
+                    </div>
 
-            <div class="attachments-section">
-                <h3 class="section-title">Add New Attachments</h3>
-                
-                <div class="file-upload-area" id="fileUploadArea">
-                    <p style="margin-bottom: 10px; color: #4a5568;">
-                        Drag and drop files here or click to browse
-                    </p>
-                    <input type="file" id="fileInput" class="file-input" multiple accept="*/*">
-                    <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                        Choose Files
+                    <div class="section-title" style="margin-top: 12px;">Add New Attachments</div>
+                    <div class="file-upload">
+                        <input type="file" id="fileInput" multiple>
+                        <label for="fileInput" class="upload-label">
+                            <span class="upload-icon">📎</span>
+                            <span>Browse Files or Drag & Drop</span>
+                        </label>
+                    </div>
+                    <div id="newFilesList"></div>
+
+                    <div class="section-title">Add Update</div>
+                    <textarea id="updateText" placeholder="Type your update here..."></textarea>
+                    <div class="char-counter" id="charCounter">0 characters</div>
+                    <button class="save-btn" id="saveBtn">
+                        <span>💾</span>
+                        <span>Save Updates</span>
                     </button>
-                    <p style="margin-top: 10px; font-size: 12px; color: #718096;">
-                        Maximum file size: 10MB per file
-                    </p>
+                    <button class="reject-btn" id="rejectBtn" style="display: none;">
+                        <span>❌</span>
+                        <span>Reject Ticket</span>
+                    </button>
                 </div>
-
-                <div class="file-list" id="newFilesList"></div>
-            </div>
-
-            <div class="update-section">
-                <h3 class="section-title">Add Update</h3>
-                
-                <div id="messageContainer" class="message hidden"></div>
-
-                <form id="updateForm">
-                    <div class="form-group">
-                        <label for="newDescription" class="form-label">New Description/Update</label>
-                        <textarea 
-                            id="newDescription" 
-                            name="newDescription" 
-                            class="form-textarea" 
-                            placeholder="Enter your update or additional information..."
-                            required
-                        ></textarea>
-                    </div>
-
-                    <div class="action-buttons">
-                        <button type="submit" class="btn btn-primary" id="saveBtn">
-                            Save Update
-                        </button>
-                        <button type="button" class="btn btn-danger" id="rejectBtn">
-                            Reject Ticket
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
 
+    <div class="notification" id="notification">
+        <span id="notificationIcon"></span>
+        <span id="notificationText"></span>
+    </div>
+
     <script>
-        // Get ticket ID from URL parameters
-        
-        // Get ticket ID from backend (passed as template variable)
-        const ticketId = {{ ticket_id }};
-
+        const ticketId = window.location.pathname.split('/').pop();
         let newFiles = [];
-        let existingAttachments = [];
-        async function initTicketPage() {
-        const res = await fetch(`/user/api/tickets/${ticketId}`);
-        const ticket = await res.json();
 
-        if (ticket.error) {
-            document.body.innerHTML = `<h3>${ticket.error}</h3>`;
-            return;
+        // Load ticket data
+        async function loadTicketData() {
+            try {
+                const response = await fetch(`/user/api/tickets/${ticketId}`);
+                if (!response.ok) throw new Error('Failed to load ticket');
+                
+                const ticket = await response.json();
+                populateTicketData(ticket);
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to load ticket data', 'error');
+            }
         }
 
-        // Fill labels
-        document.getElementById("ticket-title").innerText = ticket.title;
-        document.getElementById("ticket-status").innerText = ticket.status;
-        document.getElementById("ticket-created").innerText = new Date(ticket.created_date).toLocaleString();
-        document.getElementById("ticket-updated").innerText = new Date(ticket.last_update).toLocaleString();
-
-        // Fill staff info
-        document.getElementById("staff-info").innerHTML = `
-            <p><b>Staff:</b> ${ticket.staff_username || "Unassigned"}</p>
-            <p>Email: ${ticket.staff_email || "-"}</p>
-            <p>Contact: ${ticket.staff_contact || "-"}</p>
-        `;
-
-        // Pre-fill textareas
-        document.getElementById("description-field").value = ticket.description || "";
-        document.getElementById("client-message-field").value = ticket.client_message || "";
-
-        // Attachments
-        const attachmentsDiv = document.getElementById("attachments-list");
-        attachmentsDiv.innerHTML = "";
-        ticket.attachments.forEach(att => {
-            attachmentsDiv.innerHTML += `
-                <p><a href="${att.file_url}" target="_blank">${att.file_name}</a>
-                (Uploaded: ${new Date(att.uploaded_at).toLocaleString()})</p>
-            `;
-        });
-    }
-
-    document.addEventListener("DOMContentLoaded", initTicketPage);
-
-// Load ticket data when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    loadTicketData(); // This will now load both ticket data and attachments
-    setupFileUpload();
-});
-
-
-
-function displayAttachments() {
-    const tableBody = document.getElementById('attachmentsTableBody');
-    const noAttachments = document.getElementById('noAttachments');
-    
-    if (existingAttachments.length === 0) {
-        tableBody.innerHTML = '';
-        noAttachments.style.display = 'block';
-        document.getElementById('downloadAllBtn').style.display = 'none';
-    } else {
-        noAttachments.style.display = 'none';
-        document.getElementById('downloadAllBtn').style.display = 'block';
-        
-        tableBody.innerHTML = existingAttachments.map(file => `
-            <tr>
-                <td>${file.filename}</td>
-                <td>${file.filetype}</td>
-                <td>${formatDate(file.upload_date)}</td>
-            </tr>
-        `).join('');
-    }
-}
-
-function setupFileUpload() {
-    const fileInput = document.getElementById('fileInput');
-    const fileUploadArea = document.getElementById('fileUploadArea');
-    
-    // File input change event
-    fileInput.addEventListener('change', handleFileSelect);
-    
-    // Drag and drop events
-    fileUploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        fileUploadArea.classList.add('dragover');
-    });
-    
-    fileUploadArea.addEventListener('dragleave', () => {
-        fileUploadArea.classList.remove('dragover');
-    });
-    
-    fileUploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        fileUploadArea.classList.remove('dragover');
-        const files = Array.from(e.dataTransfer.files);
-        addFilesToList(files);
-    });
-}
-
-function handleFileSelect(e) {
-    const files = Array.from(e.target.files);
-    addFilesToList(files);
-}
-
-function addFilesToList(files) {
-    files.forEach(file => {
-        if (file.size > 10 * 1024 * 1024) { // 10MB limit
-            showMessage(`File "${file.name}" is too large. Maximum size is 10MB.`, 'error');
-            return;
-        }
-        
-        if (!newFiles.find(f => f.name === file.name && f.size === file.size)) {
-            newFiles.push(file);
-        }
-    });
-    
-    displayNewFiles();
-}
-
-function displayNewFiles() {
-    const filesList = document.getElementById('newFilesList');
-    
-    if (newFiles.length === 0) {
-        filesList.innerHTML = '';
-        return;
-    }
-    
-    filesList.innerHTML = newFiles.map((file, index) => `
-        <div class="file-item">
-            <div class="file-info">
-                <div class="file-name">${file.name}</div>
-                <div class="file-size">${formatFileSize(file.size)}</div>
-            </div>
-            <button type="button" class="remove-file-btn" onclick="removeNewFile(${index})">
-                Remove
-            </button>
-        </div>
-    `).join('');
-}
-
-function removeNewFile(index) {
-    newFiles.splice(index, 1);
-    displayNewFiles();
-}
-
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-document.getElementById('downloadAllBtn').addEventListener('click', async function() {
-    if (existingAttachments.length === 0) {
-        showMessage('No files to download', 'error');
-        return;
-    }
-    
-    const downloadBtn = document.getElementById('downloadAllBtn');
-    downloadBtn.disabled = true;
-    downloadBtn.textContent = 'Preparing download...';
-    
-    try {
-        const response = await fetch(`/user/api/tickets/${ticketId}/attachments/download-all`, {
-            method: 'GET'
-        });
-        
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ticket_${ticketId}_attachments.zip`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            showMessage('Download started successfully', 'success');
-        } else {
-            const error = await response.json();
-            showMessage(error.message || 'Failed to download files', 'error');
-        }
-    } catch (error) {
-        console.error('Error downloading files:', error);
-        showMessage('Error downloading files', 'error');
-    } finally {
-        downloadBtn.disabled = false;
-        downloadBtn.textContent = '📥 Download All Files';
-    }
-});
-// Load ticket data from Flask API
-async function loadTicketData() {
-    try {
-        const response = await fetch(`/user/api/tickets/${ticketId}`);
-        if (response.ok) {
-            const ticket = await response.json();
-            console.log('Ticket data:', ticket); // Debug log
-            populateTicketData(ticket);
-        } else {
-            console.error('Failed to load ticket:', response.status);
-            showMessage('Failed to load ticket data', 'error');
-        }
-    } catch (error) {
-        console.error('Error loading ticket:', error);
-        showMessage('Error loading ticket data', 'error');
-    }
-}
-
-// Populate ticket data in the page
-function populateTicketData(ticket) {
-    document.getElementById('ticketId').textContent = ticket.id;
-    document.getElementById('ticketTitle').textContent = ticket.title;
-    document.getElementById('ticketType').textContent = ticket.type;
-    document.getElementById('ticketUrgency').textContent = ticket.urgency;
-    document.getElementById('ticketStatus').textContent = ticket.status;
-    document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
-    document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
-    
-    document.getElementById('supportName').textContent = ticket.assigner_username || 'Not assigned';
-    document.getElementById('supportEmail').textContent = ticket.staff_email || 'N/A';
-     document.getElementById('supportPhone').textContent = ticket.staff_number || 'N/A';
-    document.getElementById('originalDescription').textContent = ticket.description;
-    document.getElementById('clientMessages').textContent = ticket.client_messages || 'No additional messages';
-
-    updateStatusBadge(ticket.status);
-    updateUrgencyBadge(ticket.urgency);
-    document.getElementById('typeBadge').textContent = ticket.type;
-    
-    // Show/hide reject button based on status
-    const rejectBtn = document.getElementById('rejectBtn');
-    if (ticket.status === 'Resolved') {
-        rejectBtn.style.display = 'block';
-    } else {
-        rejectBtn.style.display = 'none';
-    }
-    existingAttachments = ticket.attachments || [];
-    displayAttachments();
-}
-
-// Update status badge styling
-function updateStatusBadge(status) {
-    const badge = document.getElementById('statusBadge');
-    badge.className = `badge status-${status.toLowerCase().replace(' ', '-')}`;
-    badge.textContent = status;
-}
-
-// Update urgency badge styling
-function updateUrgencyBadge(urgency) {
-    const badge = document.getElementById('urgencyBadge');
-    badge.className = `badge urgency-${urgency.toLowerCase()}`;
-    badge.textContent = urgency + ' Priority';
-}
-
-// Format date for display
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString();
-}
-
-// Handle form submission
-// Update the form submission handler
-document.getElementById('updateForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const newDescription = document.getElementById('newDescription').value.trim();
-    
-    // Allow submission even if only files are attached
-    if (!newDescription && newFiles.length === 0) {
-        showMessage('Please enter a description or attach files', 'error');
-        return;
-    }
-
-    const saveBtn = document.getElementById('saveBtn');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
-
-    try {
-        const formData = new FormData();
-        if (newDescription) {
-            formData.append('description', newDescription);
-        }
-        
-        // Add new files to FormData with the correct key "files"
-        newFiles.forEach((file) => {
-            formData.append('files', file);
-        });
-
-        const response = await fetch(`/user/api/tickets/${ticketId}/update`, {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            showMessage(result.message || 'Update saved successfully!', 'success');
-            document.getElementById('newDescription').value = '';
-            newFiles = [];
-            displayNewFiles();
-            document.getElementById('fileInput').value = '';
+        function populateTicketData(ticket) {
+            document.getElementById('ticketIdDisplay').textContent = ticket.id;
+            document.getElementById('ticketTitle').textContent = ticket.title;
+            document.getElementById('originalDescription').textContent = ticket.description || 'No description';
+            document.getElementById('clientMessages').textContent = ticket.client_messages || 'No messages yet';
             
-            // Reload ticket data and attachments
-            setTimeout(() => {
-                loadTicketData();
-                // We don't need to call loadAttachments() separately anymore
-                // since the updated ticket data includes attachments
-            }, 1000);
-        } else {
-            showMessage(result.message || 'Failed to save update', 'error');
+            document.getElementById('infoType').textContent = ticket.type;
+            document.getElementById('infoPriority').textContent = ticket.urgency;
+            document.getElementById('infoStatus').textContent = ticket.status;
+            document.getElementById('infoCreateDate').textContent = ticket.created_date;
+            document.getElementById('infoLastUpdate').textContent = ticket.last_update;
+
+            document.getElementById('staffName').textContent = ticket.assigner_username || 'Not assigned';
+            document.getElementById('staffEmail').textContent = ticket.staff_email || '-';
+            document.getElementById('staffPhone').textContent = ticket.staff_number || '-';
+
+            updateStatusBadge(ticket.status);
+            updateUrgencyBadge(ticket.urgency);
+            updateTypeBadge(ticket.type);
+
+            if (ticket.status === 'Resolved') {
+                document.getElementById('rejectBtn').style.display = 'flex';
+            }
+
+            displayAttachments(ticket.attachments || []);
         }
-    } catch (error) {
-        console.error('Error saving update:', error);
-        showMessage('Error saving update', 'error');
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save Update';
-    }
-});
 
-// Handle reject button
-document.getElementById('rejectBtn').addEventListener('click', async function() {
-    // Check if ticket is resolved before allowing rejection
-    const response = await fetch(`/user/api/tickets/${ticketId}`);
-    const ticket = await response.json();
-    
-    if (ticket.status !== 'Resolved') {
-        showMessage('You can only reject tickets that are in "Resolved" status', 'error');
-        return;
-    }
-    
-    if (!confirm('Are you sure you want to reject this ticket? This will reopen it and remove the assigned staff.')) {
-        return;
-    }
+        function updateStatusBadge(status) {
+            const badge = document.getElementById('statusBadge');
+            const className = 'status-' + status.toLowerCase().replace(/[\/\s]/g, '_');
+            badge.className = `badge ${className}`;
+            badge.textContent = status;
+        }
 
-    const rejectBtn = document.getElementById('rejectBtn');
-    rejectBtn.disabled = true;
-    rejectBtn.textContent = 'Rejecting...';
+        function updateUrgencyBadge(urgency) {
+            const badge = document.getElementById('urgencyBadge');
+            badge.className = `badge priority-${urgency.toLowerCase()}`;
+            badge.textContent = urgency + ' Priority';
+        }
 
-    try {
-        const response = await fetch(`/user/api/tickets/${ticketId}/reject`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
+        function updateTypeBadge(type) {
+            const badge = document.getElementById('typeBadge');
+            const className = 'type-' + type.toLowerCase().replace(/[\/\s]/g, '_');
+            badge.className = `badge ${className}`;
+            badge.textContent = type;
+        }
+
+        function displayAttachments(attachments) {
+            const fileList = document.getElementById('fileList');
+            const downloadBtn = document.getElementById('downloadAllBtn');
+
+            if (!attachments || attachments.length === 0) {
+                fileList.innerHTML = '<div style="text-align: center; color: #718096; padding: 20px;">No attachments</div>';
+                downloadBtn.style.display = 'none';
+                return;
+            }
+
+            downloadBtn.style.display = 'flex';
+            fileList.innerHTML = attachments.map(file => `
+                <div class="file-item">
+                    <div class="file-icon">📄</div>
+                    <div class="file-info">
+                        <div class="file-name">${file.filename}</div>
+                        <div class="file-size">${file.upload_date}</div>
+                    </div>
+                    <span class="file-download">⬇</span>
+                </div>
+            `).join('');
+        }
+
+        // File handling
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (file.size > 10 * 1024 * 1024) {
+                    showNotification(`File "${file.name}" is too large. Max 10MB`, 'error');
+                    return;
+                }
+                if (!newFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    newFiles.push(file);
+                }
+            });
+            displayNewFiles();
+            e.target.value = '';
+        }
+
+        function displayNewFiles() {
+            const container = document.getElementById('newFilesList');
+            if (newFiles.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = newFiles.map((file, index) => `
+                <div class="file-item" style="margin-top: 8px;">
+                    <div class="file-icon">📎</div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${formatFileSize(file.size)}</div>
+                    </div>
+                    <button onclick="removeFile(${index})" style="background: #f56565; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            newFiles.splice(index, 1);
+            displayNewFiles();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Character counter
+        document.getElementById('updateText').addEventListener('input', function() {
+            const counter = document.getElementById('charCounter');
+            counter.textContent = `${this.value.length} characters`;
+        });
+
+        // Save update
+        document.getElementById('saveBtn').addEventListener('click', async function() {
+            const description = document.getElementById('updateText').value.trim();
+            
+            if (!description && newFiles.length === 0) {
+                showNotification('Please enter a description or attach files', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            if (description) {
+                formData.append('description', description);
+            }
+            
+            newFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            this.disabled = true;
+            this.innerHTML = '<span>⏳</span><span>Saving...</span>';
+
+            try {
+                const response = await fetch(`/user/api/tickets/${ticketId}/update`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification(result.message || 'Update saved successfully!', 'success');
+                    document.getElementById('updateText').value = '';
+                    newFiles = [];
+                    displayNewFiles();
+                    setTimeout(() => loadTicketData(), 1000);
+                } else {
+                    showNotification(result.message || 'Failed to save update', 'error');
+                }
+            } catch (error) {
+                showNotification('Error saving update', 'error');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<span>💾</span><span>Save Updates</span>';
             }
         });
 
-        const result = await response.json();
-        
-        if (response.ok) {
-            showMessage(result.message || 'Ticket rejected successfully!', 'success');
-            setTimeout(() => {
-                window.location.href = '/user/main';
-            }, 2000);
-        } else {
-            showMessage(result.message || 'Failed to reject ticket', 'error');
-        }
-    } catch (error) {
-        console.error('Error rejecting ticket:', error);
-        showMessage('Error rejecting ticket', 'error');
-    } finally {
-        rejectBtn.disabled = false;
-        rejectBtn.textContent = 'Reject Ticket';
-    }
-});
+        // Reject ticket
+        document.getElementById('rejectBtn').addEventListener('click', async function() {
+            if (!confirm('Are you sure you want to reject this ticket? This will reopen it and remove the assigned staff.')) {
+                return;
+            }
 
-// Show message function
-function showMessage(text, type) {
-    const messageContainer = document.getElementById('messageContainer');
-    messageContainer.textContent = text;
-    messageContainer.className = `message ${type}`;
-    messageContainer.classList.remove('hidden');
-    
-    setTimeout(() => {
-        messageContainer.classList.add('hidden');
-    }, 5000);
-}
+            this.disabled = true;
+            this.innerHTML = '<span>⏳</span><span>Rejecting...</span>';
+
+            try {
+                const response = await fetch(`/user/api/tickets/${ticketId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification(result.message || 'Ticket rejected successfully!', 'success');
+                    setTimeout(() => window.location.href = '/user/main', 2000);
+                } else {
+                    showNotification(result.message || 'Failed to reject ticket', 'error');
+                }
+            } catch (error) {
+                showNotification('Error rejecting ticket', 'error');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<span>❌</span><span>Reject Ticket</span>';
+            }
+        });
+
+        // Download all attachments
+        document.getElementById('downloadAllBtn').addEventListener('click', async function() {
+            this.disabled = true;
+            this.textContent = 'Preparing download...';
+
+            try {
+                const response = await fetch(`/user/api/tickets/${ticketId}/attachments/download-all`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ticket_${ticketId}_attachments.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showNotification('Download started successfully', 'success');
+                } else {
+                    showNotification('Failed to download files', 'error');
+                }
+            } catch (error) {
+                showNotification('Error downloading files', 'error');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '📥 Download All Files';
+            }
+        });
+
+        // Copy ticket ID
+        function copyTicketId() {
+            const ticketId = document.getElementById('ticketIdDisplay').textContent;
+            navigator.clipboard.writeText('#' + ticketId).then(() => {
+                showNotification('Ticket ID copied to clipboard!', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy', 'error');
+            });
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notificationIcon');
+            const text = document.getElementById('notificationText');
+            
+            icon.textContent = type === 'success' ? '✓' : '✗';
+            text.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Drag and drop
+        const fileUpload = document.querySelector('.file-upload');
+        
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.style.borderColor = '#667eea';
+            fileUpload.style.background = '#f7fafc';
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.style.borderColor = '#cbd5e0';
+            fileUpload.style.background = 'white';
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.style.borderColor = '#cbd5e0';
+            fileUpload.style.background = 'white';
+            
+            const files = Array.from(e.dataTransfer.files);
+            files.forEach(file => {
+                if (file.size > 10 * 1024 * 1024) {
+                    showNotification(`File "${file.name}" is too large. Max 10MB`, 'error');
+                    return;
+                }
+                if (!newFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    newFiles.push(file);
+                }
+            });
+            displayNewFiles();
+        });
+
+        // Initialize page
+        loadTicketData();
     </script>
 </body>
 </html>
-

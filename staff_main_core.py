@@ -20,6 +20,7 @@ import uuid
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+MAX_INLINE_SIZE = 1 * 1024 * 1024  # 1 MB threshold for DB storage
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 staff_bp = Blueprint('staff', __name__, url_prefix='/staff')
 
@@ -83,6 +84,50 @@ def reset_filters():
 def back_to_main():
     return redirect(url_for('staff.staff_main'))
 
+# ✅ Transaction History route for staff - uses SAME template and data as mod
+@staff_bp.route('/transaction_history')
+def transaction_history_page():
+    if "user_id" not in session or session.get("role") != "Staff":
+        flash("Please log in as staff to access this page", "error")
+        return redirect("/login")
+    # Use the SAME template as moderator
+    return render_template('mod_transaction_history.html')
+
+# ✅ API endpoint for staff - returns EXACT SAME data as mod
+@staff_bp.route('/api/transactions', methods=['GET'])
+def api_get_transactions():
+    if "user_id" not in session or session.get("role") != "Staff":
+        return jsonify({"message": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        # ✅ EXACT SAME QUERY as mod_main_core.py - fetches ALL transactions
+        cursor.execute("""
+            SELECT th.transaction_id,
+                   th.ticket_id,
+                   th.action_type,
+                   th.action_by      AS action_by_id,
+                   a.username        AS action_by_username,
+                   th.action_time,
+                   th.detail
+            FROM transaction_history th
+            LEFT JOIN "Accounts" a ON th.action_by = a.user_id
+            ORDER BY transaction_id DESC
+        """)
+        transactions = cursor.fetchall()
+
+        # ✅ EXACT SAME timezone conversion as mod
+        bangkok = ZoneInfo("Asia/Bangkok")
+        for t in transactions:
+            if t["action_time"]:
+                t["action_time"] = t["action_time"].astimezone(bangkok).strftime("%Y-%m-%d %H:%M")
+        return jsonify(transactions), 200
+    except Exception as e:
+        return jsonify({"message": f"Error fetching transactions: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 @staff_bp.route('/api/tickets/<ticket_id>', methods=['GET'])
 def api_get_ticket(ticket_id):
@@ -469,6 +514,7 @@ def extract_bucket_and_path(file_url):
     except Exception as e:
         print(f"Error parsing URL {file_url}: {str(e)}")
         return "large_file_for_db", file_url.split('/public/')[-1] if '/public/' in file_url else ""
+
 @staff_bp.route('/api/account_info', methods=['GET'])
 def api_account_info():
     if 'user_id' not in session or session.get('role') != 'Staff':

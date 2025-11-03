@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Ticket - IT Ticketing System</title>
+    <title>Staff Ticket Details</title>
     <style>
         * {
             margin: 0;
@@ -12,775 +12,976 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #ed8936 0%, #c05621 100%);
-            min-height: 100vh;
-            color: #333;
+            height: 100vh;
+            overflow: hidden;
+            padding: 20px;
+            margin: 0;
         }
 
         .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
         }
 
-        .header h1 {
-            color: #2d3748;
-            font-size: 24px;
-            font-weight: 600;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
         .back-btn {
-            background: #ed8936;
+            background: linear-gradient(135deg, #ed8936 0%, #c05621 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
+            padding: 12px 24px;
+            border-radius: 10px;
             font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(237, 137, 54, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .back-btn:hover {
-            background: #c05621;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(237, 137, 54, 0.4);
         }
 
-        .ticket-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .ticket-header {
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2d3748;
         }
 
         .ticket-id {
             color: #718096;
             font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        .ticket-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 15px;
-        }
-
-        .status-badges {
+            font-weight: 500;
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn {
+            background: #edf2f7;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            color: #4a5568;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .ticket-header {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ticket-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ed8936 0%, #c05621 50%, #ed8936 100%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .ticket-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            flex: 1;
         }
 
         .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 14px 28px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 1);
+            transition: all 0.3s ease;
+            animation: pulse 2s ease-in-out infinite;
+            cursor: default;
+        }
+
+        .badge:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(7, 5, 5, 1);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        .status-open { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); color: #1976d2; }
+        .status-assigned-in_queue { 
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+            animation: pulse-progress 1.5s ease-in-out infinite;
+        }
+        .status-assigned-working_on { 
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+        }
+        .status-pending { background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); color: #f9a825; }
+        .status-reassigning { background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); color: #c2185b; }
+        .status-out_of_service { 
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            color: red;
+        }
+        .status-to_upper_level { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); color: #7b1fa2; }
+        .status-resolved { background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%); color: #2e7d32; }
+        .status-closed { background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%); color: #616161; }
+
+        @keyframes pulse-progress {
+            0%, 100% { box-shadow: 0 6px 20px rgba(245, 124, 0, 0.3); }
+            50% { box-shadow: 0 8px 30px rgba(245, 124, 0, 0.6); }
+        }
+
+        .priority-critical { background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); color: #d32f2f; font-size: 18px; padding: 16px 32px; animation: pulse-urgent 1s ease-in-out infinite; border: 3px solid #d32f2f; }
+        .priority-high { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); color: #f57c00; font-size: 17px; padding: 15px 30px; }
+        .priority-medium { background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); color: #f9a825; }
+        .priority-low { background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%); color: #2e7d32; }
+
+        @keyframes pulse-urgent {
+            0%, 100% { box-shadow: 0 8px 25px rgba(211, 47, 47, 0.5); transform: scale(1); }
+            50% { box-shadow: 0 12px 40px rgba(211, 47, 47, 0.8); transform: scale(1.05); }
+        }
+
+        .type-software { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); color: #1976d2; }
+        .type-hardware { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); color: #7b1fa2; }
+        .type-network, .type-network\/connectivity { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); color: #00796b; }
+        .type-account, .type-account\/access { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); color: #f57c00; }
+        .type-security { background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); color: #d32f2f; }
+        .type-file, .type-file\/storage { background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); color: #c2185b; }
+        .type-service_request { background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%); color: #3f51b5; }
+        .type-other { background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%); color: #616161; }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 0.8fr 1.2fr 1fr;
+            gap: 20px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .left-column::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .left-column::-webkit-scrollbar-track {
+            background: rgba(237, 242, 247, 0.5);
+            border-radius: 10px;
+        }
+
+        .left-column::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
+        }
+
+        .left-column::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        .section {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: linear-gradient(135deg, #ed8936 0%, #c05621 100%);
+            border-radius: 2px;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 10px;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        .info-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .info-grid::-webkit-scrollbar-track {
+            background: #edf2f7;
+            border-radius: 10px;
+        }
+
+        .info-grid::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
+        }
+
+        .info-box {
+            background: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border-left: 4px solid #ed8936;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        .info-box:hover {
+            border-left-color: #c05621;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transform: translateX(3px);
+        }
+
+        .info-label {
+            font-size: 10px;
+            color: #718096;
             font-weight: 600;
+            margin-bottom: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .badge.status-open { background: #c6f6d5; color: #22543d; }
-        .badge.status-in-progress { background: #fed7d7; color: #742a2a; }
-        .badge.status-resolved { background: #bee3f8; color: #2a4365; }
-        .badge.status-closed { background: #e2e8f0; color: #4a5568; }
-
-        .badge.urgency-low { background: #c6f6d5; color: #22543d; }
-        .badge.urgency-medium { background: #feebc8; color: #744210; }
-        .badge.urgency-high { background: #fed7d7; color: #742a2a; }
-        .badge.urgency-critical { background: #fed7d7; color: #742a2a; }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .detail-section {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 20px;
-        }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #ed8936;
-            padding-bottom: 5px;
-        }
-
-        .detail-item {
-            margin-bottom: 12px;
-        }
-
-        .detail-label {
-            font-weight: 600;
-            color: #4a5568;
+        .info-value {
             font-size: 14px;
-            margin-bottom: 4px;
-        }
-
-        .detail-value {
             color: #2d3748;
-            font-size: 16px;
-        }
-
-        .description-section {
-            margin-bottom: 30px;
-        }
-
-        .description-box {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            min-height: 120px;
-            font-size: 16px;
-            line-height: 1.6;
-            color: #2d3748;
-        }
-
-        .update-section {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
             font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 8px;
-            font-size: 16px;
+            word-wrap: break-word;
         }
 
-        .form-textarea {
+        .text-viewer {
+            background: white;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 13px;
+            color: #4a5568;
+            line-height: 1.8;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+            border: 1px solid #e2e8f0;
+            white-space: pre-wrap;
+        }
+
+        .text-viewer::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .text-viewer::-webkit-scrollbar-track {
+            background: #edf2f7;
+            border-radius: 10px;
+        }
+
+        .text-viewer::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
+        }
+
+        textarea {
             width: 100%;
-            min-height: 120px;
-            padding: 12px;
+            background: white;
             border: 2px solid #e2e8f0;
             border-radius: 8px;
-            font-size: 16px;
-            font-family: inherit;
-            resize: vertical;
-            transition: border-color 0.2s ease;
+            padding: 14px;
+            font-size: 13px;
+            color: #2d3748;
+            resize: none;
+            flex: 1;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 80px;
+            line-height: 1.6;
+            transition: all 0.3s ease;
         }
 
-        .form-textarea:focus {
+        textarea:focus {
             outline: none;
             border-color: #ed8936;
             box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-
-        .btn-primary {
-            background: #ed8936;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #c05621;
-            transform: translateY(-1px);
-        }
-
         .status-buttons {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
-        .btn-status {
+        .status-btn {
             padding: 8px 16px;
             border: none;
             border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
+            color: white;
         }
 
-        .btn-work { background: #3182ce; color: white; }
-        .btn-work:hover { background: #2c5282; }
+        .status-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
 
-        .btn-pending { background: #d69e2e; color: white; }
-        .btn-pending:hover { background: #b7791f; }
+        .btn-work { background: #3182ce; }
+        .btn-pending { background: #d69e2e; }
+        .btn-reassign { background: #805ad5; }
+        .btn-resolve { background: #38a169; }
 
-        .btn-reassign { background: #805ad5; color: white; }
-        .btn-reassign:hover { background: #6b46c1; }
+        .dropdown-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
 
-        .btn-resolve { background: #38a169; color: white; }
-        .btn-resolve:hover { background: #2f855a; }
+        .dropdown-group select {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
 
-        .btn-close { background: #718096; color: white; }
-        .btn-close:hover { background: #4a5568; }
+        .dropdown-group select:focus {
+            outline: none;
+            border-color: #ed8936;
+            box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
+        }
 
-        .btn:disabled {
-            opacity: 0.6;
+        #statusDropdown:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        #applyStatusBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(66, 153, 225, 0.4);
+        }
+
+        #applyStatusBtn:active {
+            transform: translateY(0);
+        }
+
+        #applyStatusBtn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
 
-        .loading {
-            opacity: 0.7;
-        }
-
-        .message {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
-
-        .message.success {
-            background: #c6f6d5;
-            color: #22543d;
-            border: 1px solid #9ae6b4;
-        }
-
-        .message.error {
-            background: #fed7d7;
-            color: #742a2a;
-            border: 1px solid #feb2b2;
-        }
-
-        .message.hidden {
-            display: none;
-        }
-
-        .attachments-container {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 20px;
-        }
-
-        .attachments-table-container {
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .attachments-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-
-        .attachments-table th {
-            background: #ed8936;
+        .save-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
             color: white;
-            padding: 12px 16px;
-            text-align: left;
-            font-weight: 600;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
             font-size: 14px;
-            border-bottom: 2px solid #c05621;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        .attachments-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid #e2e8f0;
-            color: #2d3748;
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
         }
 
-        .attachments-table tbody tr:hover {
-            background: #f7fafc;
+        .save-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
-        .no-attachments {
-            text-align: center;
-            color: #718096;
-            font-style: italic;
-            padding: 20px;
-        }
-
-        .file-type-badge {
-            background: #e2e8f0;
-            color: #4a5568;
-            padding: 4px 8px;
-            border-radius: 4px;
+        .download-all-btn {
+            background: linear-gradient(135deg, #38b2ac 0%, #2c7a7b 100%);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
             font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
+        .download-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(56, 178, 172, 0.3);
+        }
 
-            .header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+            max-height: 150px;
+        }
 
-            .details-grid {
-                grid-template-columns: 1fr;
-            }
+        .file-list::-webkit-scrollbar {
+            width: 6px;
+        }
 
-            .action-buttons {
-                flex-direction: column;
-            }
+        .file-list::-webkit-scrollbar-track {
+            background: #edf2f7;
+            border-radius: 10px;
+        }
 
-            .btn {
-                width: 100%;
+        .file-list::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
+        }
+
+        .file-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            border: 1px solid #e2e8f0;
+            font-size: 12px;
+        }
+
+        .file-item:hover {
+            background: #f7fafc;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-color: #ed8936;
+        }
+
+        .file-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #ed8936 0%, #c05621 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 12px;
+            color: #2d3748;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-size {
+            font-size: 10px;
+            color: #718096;
+            margin-top: 2px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 20px;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
             }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.show {
+            display: flex;
+        }
+
+        .notification.success {
+            border-left: 4px solid #48bb78;
+        }
+
+        .notification.error {
+            border-left: 4px solid #f56565;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Staff - Ticket Details</h1>
-            <a href="/staff/staff_main" class="back-btn">← Back to Staff Dashboard</a>
+            <div class="header-left">
+                <button class="back-btn" onclick="window.location.href='/staff/staff_main'">
+                    <span>←</span>
+                    <span>Back to Dashboard</span>
+                </button>
+                <div>
+                    <div class="title">Staff Ticket Details</div>
+                    <div class="ticket-id">
+                        Ticket ID: #<span id="ticketIdDisplay"></span>
+                        <button class="copy-btn" onclick="copyTicketId()">📋 Copy</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="ticket-container">
-            <div class="ticket-header">
-                <div class="ticket-id">Ticket #<span id="ticketId">12345</span></div>
-                <h2 class="ticket-title" id="ticketTitle"></h2>
-                <div class="status-badges">
-                    <span class="badge status-open" id="statusBadge"></span>
-                    <span class="badge urgency-high" id="urgencyBadge"></span>
-                    <span class="badge" id="typeBadge" style="background: #e2e8f0; color: #4a5568;"></span>
+        <div class="ticket-header">
+            <div class="ticket-name" id="ticketTitle">Loading...</div>
+            <span class="badge" id="statusBadge">Loading</span>
+            <span class="badge" id="urgencyBadge">Loading</span>
+            <span class="badge" id="typeBadge">Loading</span>
+        </div>
+
+        <div class="main-content">
+            <!-- Left Column -->
+            <div class="left-column">
+                <div class="section" style="flex: 1; min-height: 0;">
+                    <div class="section-title">Ticket Information</div>
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-label">Type</div>
+                            <div class="info-value" id="infoType">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Priority</div>
+                            <div class="info-value" id="infoPriority">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Status</div>
+                            <div class="info-value" id="infoStatus">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Create Date</div>
+                            <div class="info-value" id="infoCreateDate">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Last Update</div>
+                            <div class="info-value" id="infoLastUpdate">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section" style="flex: 0.8; min-height: 0;">
+                    <div class="section-title">Customer Information</div>
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-label">Customer Name</div>
+                            <div class="info-value" id="customerName">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Customer Email</div>
+                            <div class="info-value" id="customerEmail">-</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Customer Number</div>
+                            <div class="info-value" id="customerPhone">-</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="details-grid">
-                <div class="detail-section">
-                    <h3 class="section-title">Ticket Information</h3>
-                    <div class="detail-item">
-                        <div class="detail-label">Type</div>
-                        <div class="detail-value" id="ticketType"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Urgency</div>
-                        <div class="detail-value" id="ticketUrgency"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value" id="ticketStatus"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Created Date</div>
-                        <div class="detail-value" id="createdDate"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Last Update</div>
-                        <div class="detail-value" id="lastUpdate"></div>
-                    </div>
+            <!-- Middle Column -->
+            <div class="left-column">
+                <div class="section" style="flex: 0.6; min-height: 0;">
+                    <div class="section-title">Original Description</div>
+                    <div class="text-viewer" id="originalDescription">Loading...</div>
                 </div>
 
-                <div class="detail-section">
-                    <h3 class="section-title">Customer Information</h3>
-                    <div class="detail-item">
-                        <div class="detail-label">Name</div>
-                        <div class="detail-value" id="customerName"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Email</div>
-                        <div class="detail-value" id="customerEmail"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Contact Number</div>
-                        <div class="detail-value" id="customerPhone"></div>
-                    </div>
+                <div class="section" style="flex: 0.7; min-height: 0;">
+                    <div class="section-title">Client Messages</div>
+                    <div class="text-viewer" id="clientMessages">No messages yet</div>
+                </div>
+
+                <div class="section" style="flex: 0.7; min-height: 0;">
+                    <div class="section-title">Developer Messages</div>
+                    <div class="text-viewer" id="devMessages">No messages yet</div>
                 </div>
             </div>
 
-            <div class="description-section">
-                <h3 class="section-title">Original Description</h3>
-                <div class="description-box" id="originalDescription">
-            </div>
-
-            <div class="description-section">
-                <h3 class="section-title">Client Messages</h3>
-                <div class="description-box" id="clientMessages">
+            <!-- Right Column -->
+            <div class="left-column">
+                <div class="section" style="flex: 0.5; min-height: 0;">
+                    <div class="section-title">Attachments</div>
+                    <button class="download-all-btn" id="downloadAllBtn" style="display: none;">
+                        📥 Download All Files
+                    </button>
+                    <div class="file-list" id="fileList">
+                        <div style="text-align: center; color: #718096; padding: 15px; font-size: 12px;">
+                            No attachments
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="description-section">
-                <h3 class="section-title">Developer Messages</h3>
-                <div class="description-box" id="devMessages">
-                </div>
-            </div>
-
-            <div class="description-section">
-                <h3 class="section-title">Ticket Attachments</h3>
-                <div class="attachments-container">
-                    <div class="attachments-header">
-                        <button type="button" class="btn btn-primary" id="downloadAllBtn" onclick="downloadAllFiles()" style="margin-bottom: 15px;">
-                            📥 Download All Files
+                <div class="section" style="flex: 1; min-height: 0;">
+                    <div class="section-title">Status Changer & Updates</div>
+                    
+                    <div style="margin-bottom: 8px; font-size: 11px; font-weight: 600; color: #4a5568; text-transform: uppercase;">Change Status:</div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                        <select id="statusDropdown" style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+                            <option value="">-- Select New Status --</option>
+                            <option value="Assigned-working_on">🔧 Working On</option>
+                            <option value="Pending">⏸️ Temporal Pause</option>
+                            <option value="Reassigned">🔄 Reassign</option>
+                            <option value="Resolved">✅ Resolved</option>
+                        </select>
+                        <button id="applyStatusBtn" onclick="applyStatusChange()" style="padding: 12px 20px; background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; white-space: nowrap; box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);">
+                            Apply
                         </button>
                     </div>
-                    <div class="attachments-table-container">
-                        <table class="attachments-table" id="attachmentsTable">
-                            <thead>
-                                <tr>
-                                    <th>File Name</th>
-                                    <th>File Type</th>
-                                    <th>Upload Date</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attachmentsTableBody">
-                                <tr>
-                                    <td colspan="3" class="no-attachments">Loading attachments...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+
+                    <div style="margin: 12px 0 8px 0; font-size: 11px; font-weight: 600; color: #4a5568; text-transform: uppercase;">Update Client Message:</div>
+                    <textarea id="clientMessageText" placeholder="Update for client..."></textarea>
+
+                    <div style="margin: 12px 0 8px 0; font-size: 11px; font-weight: 600; color: #4a5568; text-transform: uppercase;">Update Developer Message:</div>
+                    <textarea id="devMessageText" placeholder="Technical notes..."></textarea>
+
+                    <button class="save-btn" id="saveBtn">
+                        <span>💾</span>
+                        <span>Save Updates</span>
+                    </button>
                 </div>
-            </div>
-
-            <div class="update-section">
-                <h3 class="section-title">Change Status</h3>
-                <div class="status-buttons">
-                    <button type="button" class="btn-status btn-work" onclick="changeStatus('Assigned-working_on')">Work</button>
-                    <button type="button" class="btn-status btn-pending" onclick="changeStatus('Pending')">Pending</button>
-                    <button type="button" class="btn-status btn-reassign" onclick="changeStatus('Reassigned')">Reassign</button>
-                    <button type="button" class="btn-status btn-resolve" onclick="changeStatus('Resolved')">Resolve</button>
-                    <button type="button" class="btn-status btn-close" onclick="changeStatus('Closed')">Close</button>
-                </div>
-
-                <h3 class="section-title">Update Messages</h3>
-                
-                <div id="messageContainer" class="message hidden"></div>
-
-                <form id="updateForm">
-                    <div class="form-group">
-                        <label for="newClientMessage" class="form-label">Update Client Message</label>
-                        <textarea 
-                            id="newClientMessage" 
-                            name="newClientMessage" 
-                            class="form-textarea" 
-                            placeholder="Enter client message update..."
-                        ></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="newDevMessage" class="form-label">Update Developer Message</label>
-                        <textarea 
-                            id="newDevMessage" 
-                            name="newDevMessage" 
-                            class="form-textarea" 
-                            placeholder="Enter developer notes and updates..."
-                        ></textarea>
-                    </div>
-
-                    <div class="action-buttons">
-                        <button type="submit" class="btn btn-primary" id="saveBtn">
-                            Save Updates
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
 
+    <div class="notification" id="notification">
+        <span id="notificationIcon"></span>
+        <span id="notificationText"></span>
+    </div>
+
     <script>
-        // Get ticket ID from URL parameters
-        
-        // Get ticket ID from backend (passed as template variable)
-        const ticketId = {{ ticket_id }};
+        const ticketId = window.location.pathname.split('/').pop();
 
-        // Load ticket data when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadTicketData();
-            loadAttachments();
-        });
-
-        // Load ticket data from Flask API
         async function loadTicketData() {
             try {
                 const response = await fetch(`/staff/api/tickets/${ticketId}`);
-                if (response.ok) {
-                    const ticket = await response.json();
-                    populateTicketData(ticket);
-                } else {
-                    showMessage('Failed to load ticket data', 'error');
-                }
+                if (!response.ok) throw new Error('Failed to load ticket');
+                
+                const ticket = await response.json();
+                populateTicketData(ticket);
             } catch (error) {
-                console.error('Error loading ticket:', error);
-                showMessage('Error loading ticket data', 'error');
+                console.error('Error:', error);
+                showNotification('Failed to load ticket data', 'error');
             }
         }
 
-        // Populate ticket data in the page
         function populateTicketData(ticket) {
-            document.getElementById('ticketId').textContent = ticket.id;
+            document.getElementById('ticketIdDisplay').textContent = ticket.id;
             document.getElementById('ticketTitle').textContent = ticket.title;
-            document.getElementById('ticketType').textContent = ticket.type;
-            document.getElementById('ticketUrgency').textContent = ticket.urgency;
-            document.getElementById('ticketStatus').textContent = ticket.status;
-            document.getElementById('createdDate').textContent = formatDate(ticket.created_date);
-            document.getElementById('lastUpdate').textContent = formatDate(ticket.last_update);
-            document.getElementById('customerName').textContent = ticket.reporter_username || 'Unknown Customer';
-            document.getElementById('customerEmail').textContent = ticket.user_email || 'N/A';
-            document.getElementById('customerPhone').textContent = ticket.user_number || 'N/A';
-            document.getElementById('originalDescription').textContent = ticket.description;
-            document.getElementById('clientMessages').textContent = ticket.client_messages || 'No client messages';
-            document.getElementById('devMessages').textContent = ticket.dev_messages || 'No developer messages';
+            document.getElementById('originalDescription').textContent = ticket.description || 'No description';
+            document.getElementById('clientMessages').textContent = ticket.client_messages || 'No messages yet';
+            document.getElementById('devMessages').textContent = ticket.dev_messages || 'No messages yet';
+            
+            document.getElementById('infoType').textContent = ticket.type;
+            document.getElementById('infoPriority').textContent = ticket.urgency;
+            document.getElementById('infoStatus').textContent = ticket.status;
+            document.getElementById('infoCreateDate').textContent = ticket.created_date;
+            document.getElementById('infoLastUpdate').textContent = ticket.last_update;
 
-            // Update badges
+            document.getElementById('customerName').textContent = ticket.reporter_username || 'Unknown';
+            document.getElementById('customerEmail').textContent = ticket.user_email || '-';
+            document.getElementById('customerPhone').textContent = ticket.user_number || '-';
+
             updateStatusBadge(ticket.status);
             updateUrgencyBadge(ticket.urgency);
-            document.getElementById('typeBadge').textContent = ticket.type;
+            updateTypeBadge(ticket.type);
+
+            displayAttachments(ticket.attachments || []);
         }
 
-        // Update status badge styling
         function updateStatusBadge(status) {
             const badge = document.getElementById('statusBadge');
-            badge.className = `badge status-${status.toLowerCase().replace(' ', '-')}`;
+            const className = 'status-' + status.toLowerCase().replace(/[\/\s\-]/g, '_');
+            badge.className = `badge ${className}`;
             badge.textContent = status;
         }
 
-        // Update urgency badge styling
         function updateUrgencyBadge(urgency) {
             const badge = document.getElementById('urgencyBadge');
-            badge.className = `badge urgency-${urgency.toLowerCase()}`;
+            badge.className = `badge priority-${urgency.toLowerCase()}`;
             badge.textContent = urgency + ' Priority';
         }
 
-        // Format date for display
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            const date = new Date(dateString);
-            return date.toLocaleString();
+        function updateTypeBadge(type) {
+            const badge = document.getElementById('typeBadge');
+            // Handle type names with slashes and spaces
+            const cleanType = type.toLowerCase()
+                .replace(/\//g, '\/')
+                .replace(/\s+/g, '_');
+            const className = 'type-' + cleanType;
+            badge.className = `badge ${className}`;
+            badge.textContent = type;
         }
 
-        // Handle form submission
-        document.getElementById('updateForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const newClientMessage = document.getElementById('newClientMessage').value.trim();
-            const newDevMessage = document.getElementById('newDevMessage').value.trim();
-            
-            if (!newClientMessage && !newDevMessage) {
-                showMessage('Please enter at least one message update', 'error');
+        function displayAttachments(attachments) {
+            const fileList = document.getElementById('fileList');
+            const downloadBtn = document.getElementById('downloadAllBtn');
+
+            if (!attachments || attachments.length === 0) {
+                fileList.innerHTML = '<div style="text-align: center; color: #718096; padding: 15px; font-size: 12px;">No attachments</div>';
+                downloadBtn.style.display = 'none';
                 return;
             }
 
-            const saveBtn = document.getElementById('saveBtn');
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Saving...';
+            downloadBtn.style.display = 'flex';
+            fileList.innerHTML = attachments.map(file => `
+                <div class="file-item">
+                    <div class="file-icon">📄</div>
+                    <div class="file-info">
+                        <div class="file-name">${file.filename}</div>
+                        <div class="file-size">${file.upload_date}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function applyStatusChange() {
+            const dropdown = document.getElementById('statusDropdown');
+            const selectedStatus = dropdown.value;
+            
+            if (!selectedStatus) {
+                showNotification('Please select a status', 'error');
+                return;
+            }
+            
+            changeStatus(selectedStatus);
+        }
+
+        async function changeStatus(newStatus) {
+            if (!confirm(`Change status to "${newStatus}"?`)) return;
+
+            const applyBtn = document.getElementById('applyStatusBtn');
+            applyBtn.disabled = true;
+            applyBtn.textContent = 'Applying...';
+
+            try {
+                const response = await fetch(`/staff/api/tickets/${ticketId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification(`Status changed to ${newStatus}!`, 'success');
+                    document.getElementById('statusDropdown').value = '';
+                    
+                    if (result.redirect) {
+                        setTimeout(() => window.location.href = result.redirect, 1500);
+                    } else {
+                        setTimeout(() => loadTicketData(), 1000);
+                    }
+                } else {
+                    showNotification(result.message || 'Failed to change status', 'error');
+                }
+            } catch (error) {
+                showNotification('Error changing status', 'error');
+            } finally {
+                applyBtn.disabled = false;
+                applyBtn.textContent = 'Apply';
+            }
+        }
+
+        document.getElementById('saveBtn').addEventListener('click', async function() {
+            const clientMessage = document.getElementById('clientMessageText').value.trim();
+            const devMessage = document.getElementById('devMessageText').value.trim();
+            
+            if (!clientMessage && !devMessage) {
+                showNotification('Please enter at least one message', 'error');
+                return;
+            }
+
+            this.disabled = true;
+            this.innerHTML = '<span>⏳</span><span>Saving...</span>';
 
             try {
                 const response = await fetch(`/staff/api/tickets/${ticketId}/update`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        client_message: newClientMessage,
-                        dev_message: newDevMessage
+                        client_message: clientMessage,
+                        dev_message: devMessage
                     })
                 });
 
                 const result = await response.json();
                 
                 if (response.ok) {
-                    showMessage(result.message || 'Updates saved successfully!', 'success');
-                    document.getElementById('newClientMessage').value = '';
-                    document.getElementById('newDevMessage').value = '';
-                    setTimeout(() => {
-                        loadTicketData();
-                    }, 1000);
+                    showNotification(result.message || 'Updates saved successfully!', 'success');
+                    document.getElementById('clientMessageText').value = '';
+                    document.getElementById('devMessageText').value = '';
+                    setTimeout(() => loadTicketData(), 1000);
                 } else {
-                    showMessage(result.message || 'Failed to save updates', 'error');
+                    showNotification(result.message || 'Failed to save updates', 'error');
                 }
             } catch (error) {
-                console.error('Error saving updates:', error);
-                showMessage('Error saving updates', 'error');
+                showNotification('Error saving updates', 'error');
             } finally {
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Save Updates';
+                this.disabled = false;
+                this.innerHTML = '<span>💾</span><span>Save Updates</span>';
             }
         });
 
-        // Status change function
-        // Update the changeStatus function in staff_ticket_detail.html
-async function changeStatus(newStatus) {
-    if (!confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/staff/api/tickets/${ticketId}/status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                status: newStatus
-            })
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            showMessage(`Status changed to ${newStatus} successfully!`, 'success');
-            
-            // Redirect for Reassigned or Closed status
-            if (newStatus === 'Reassigned' || newStatus === 'Closed') {
-                setTimeout(() => {
-                    window.location.href = '/staff/staff_main';
-                }, 1500); // Redirect after 1.5 seconds
-            } else {
-                loadTicketData(); // Reload to show updated status
-            }
-        } else {
-            showMessage(result.message || 'Failed to change status', 'error');
-        }
-    } catch (error) {
-        console.error('Error changing status:', error);
-        showMessage('Error changing status', 'error');
-    }
-}
-
-        // Show message function
-        function showMessage(text, type) {
-            const messageContainer = document.getElementById('messageContainer');
-            messageContainer.textContent = text;
-            messageContainer.className = `message ${type}`;
-            messageContainer.classList.remove('hidden');
-            
-            setTimeout(() => {
-                messageContainer.classList.add('hidden');
-            }, 5000);
-        }
-
-        // Load attachments from Flask API
-        async function loadAttachments() {
-            try {
-                const response = await fetch(`/staff/api/tickets/${ticketId}/attachments`);
-                if (response.ok) {
-                    const attachments = await response.json();
-                    displayAttachments(attachments);
-                } else {
-                    console.error('Failed to load attachments');
-                    displayAttachments([]);
-                }
-            } catch (error) {
-                console.error('Error loading attachments:', error);
-                displayAttachments([]);
-            }
-        }
-
-        // Display attachments in table
-        function displayAttachments(attachments) {
-            const tableBody = document.getElementById('attachmentsTableBody');
-            
-            if (attachments.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="3" class="no-attachments">No attachments found</td></tr>';
-                document.getElementById('downloadAllBtn').style.display = 'none';
-                return;
-            }
-
-            document.getElementById('downloadAllBtn').style.display = 'inline-block';
-            
-            tableBody.innerHTML = attachments.map(attachment => `
-                <tr>
-                    <td>${escapeHtml(attachment.filename)}</td>
-                    <td><span class="file-type-badge">${escapeHtml(attachment.file_type)}</span></td>
-                    <td>${formatDate(attachment.upload_date)}</td>
-                </tr>
-            `).join('');
-        }
-
-        // Download all files as ZIP
-        async function downloadAllFiles() {
-            const downloadBtn = document.getElementById('downloadAllBtn');
-            const originalText = downloadBtn.textContent;
-            
-            downloadBtn.disabled = true;
-            downloadBtn.textContent = '📦 Creating ZIP...';
+        document.getElementById('downloadAllBtn').addEventListener('click', async function() {
+            this.disabled = true;
+            this.textContent = 'Preparing download...';
 
             try {
-                const response = await fetch(`/staff/api/tickets/${ticketId}/attachments/download-all`, {
-                    method: 'GET'
-                });
-
+                const response = await fetch(`/staff/api/tickets/${ticketId}/attachments/download-all`);
+                
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `ticket-${ticketId}-attachments.zip`;
+                    a.download = `ticket_${ticketId}_attachments.zip`;
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
-                    
-                    showMessage('All files downloaded successfully!', 'success');
+                    showNotification('Download started successfully', 'success');
                 } else {
-                    const error = await response.json();
-                    showMessage(error.message || 'Failed to download files', 'error');
+                    showNotification('Failed to download files', 'error');
                 }
             } catch (error) {
-                console.error('Error downloading files:', error);
-                showMessage('Error downloading files', 'error');
+                showNotification('Error downloading files', 'error');
             } finally {
-                downloadBtn.disabled = false;
-                downloadBtn.textContent = originalText;
+                this.disabled = false;
+                this.innerHTML = '📥 Download All Files';
             }
+        });
+
+        function copyTicketId() {
+            const ticketId = document.getElementById('ticketIdDisplay').textContent;
+            navigator.clipboard.writeText('#' + ticketId).then(() => {
+                showNotification('Ticket ID copied to clipboard!', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy', 'error');
+            });
         }
 
-        // Utility function to escape HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notificationIcon');
+            const text = document.getElementById('notificationText');
+            
+            icon.textContent = type === 'success' ? '✓' : '✗';
+            text.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
+
+        loadTicketData();
     </script>
 </body>
 </html>

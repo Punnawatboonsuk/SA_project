@@ -51,36 +51,13 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        /* Update the filter section layout */
-.filter-section {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
-}
+        .filter-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
 
-/* Make the detail filter span the full width */
-.filter-group.full-width {
-    grid-column: 1 / -1; /* Span all columns */
-}
-
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-    .filter-section {
-        grid-template-columns: repeat(3, minmax(200px, 1fr));
-    }
-}
-
-@media (max-width: 768px) {
-    .filter-section {
-        grid-template-columns: 1fr;
-    }
-    
-    .date-filter-group {
-        flex-direction: column;
-        align-items: stretch;
-    }
-}
         .filter-group {
             display: flex;
             flex-direction: column;
@@ -105,21 +82,11 @@
             border-color: #667eea;
         }
 
-        .date-filter-group {
-            display: flex;
-            gap: 10px;
-            align-items: end;
-        }
-
-        .date-filter-group select {
-            min-width: 150px;
-        }
-
         .action-buttons {
             display: flex;
             gap: 10px;
             justify-content: space-between;
-            align-items: center;
+            margin-top: 15px;
         }
 
         .btn {
@@ -155,59 +122,189 @@
             transform: translateY(-2px);
         }
 
-        .table-container {
+        /* Ticket Cards */
+        .tickets-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .ticket-card {
             background: white;
             border-radius: 10px;
-            overflow: hidden;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
         }
 
-        .table-wrapper {
-            overflow-x: auto;
+        .ticket-card:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
+        .ticket-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
         }
 
-        thead {
-            background: #f8f9fa;
+        .ticket-header:hover {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
         }
 
-        th {
-            padding: 15px 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #555;
-            border-bottom: 2px solid #e9ecef;
-            white-space: nowrap;
-        }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #e9ecef;
-            vertical-align: top;
-        }
-
-        tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .transaction-id {
-            font-family: 'Courier New', monospace;
-            font-weight: 600;
-            color: #667eea;
+        .ticket-header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
         }
 
         .ticket-id {
             font-family: 'Courier New', monospace;
-            color: #28a745;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .ticket-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .info-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .transaction-count {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .latest-action {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .first-activity {
+            background: #e7f3ff;
+            color: #004085;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .last-activity {
+            background: #fff3e0;
+            color: #e65100;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .age-indicator {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .new-ticket {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .recent-ticket {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .old-ticket {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+            color: #667eea;
+        }
+
+        .ticket-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Timeline */
+        .timeline-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            background: #f8f9fa;
+        }
+
+        .ticket-card.expanded .timeline-container {
+            max-height: 2000px;
+        }
+
+        .timeline {
+            padding: 30px;
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 80px;
+            padding-bottom: 30px;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: 38px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid #667eea;
+            z-index: 1;
+        }
+
+        .timeline-content {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
         .action-type {
-            padding: 4px 8px;
+            padding: 4px 10px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: 600;
@@ -219,48 +316,67 @@
         .action-assign { background: #fff3cd; color: #856404; }
         .action-status_change { background: #f8d7da; color: #721c24; }
         .action-reopen { background: #f8d7da; color: #1c1f72; }
-        .action-type_urgency_update {background: #f8d7da; color: #4b1c72;}
-        .action-message_update {background: #f8d7da; color: #721c6c;}
-        .action-by {
-            font-weight: 600;
-            color: #495057;
-        }
+        .action-type_urgency_update { background: #e7d4f5; color: #4b1c72; }
+        .action-message_update { background: #fce4ec; color: #721c6c; }
 
-
-        .action-date {
+        .timeline-date {
             font-family: 'Courier New', monospace;
+            font-size: 13px;
             color: #6c757d;
         }
 
-        .detail {
-            max-width: 300px;
-            word-wrap: break-word;
+        .timeline-body {
+            margin-top: 10px;
+        }
+
+        .timeline-actor {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .timeline-detail {
+            color: #6c757d;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
         .no-results {
             text-align: center;
-            padding: 40px;
+            padding: 60px 20px;
             color: #6c757d;
-            font-style: italic;
+            font-size: 1.1rem;
+            background: white;
+            border-radius: 10px;
         }
 
         @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .filter-section {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-buttons {
+            .ticket-header-left {
                 flex-direction: column;
-                gap: 15px;
+                align-items: flex-start;
+                gap: 10px;
             }
-            
-            .date-filter-group {
-                flex-direction: column;
-                align-items: stretch;
+
+            .ticket-info {
+                flex-wrap: wrap;
+                width: 100%;
+            }
+
+            .info-badge {
+                font-size: 11px;
+                padding: 4px 8px;
+            }
+
+            .timeline::before {
+                left: 30px;
+            }
+
+            .timeline-item {
+                padding-left: 60px;
+            }
+
+            .timeline-marker {
+                left: 18px;
             }
         }
     </style>
@@ -268,280 +384,268 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Transaction History</h1>
-            <p>View and filter all ticket transaction records</p>
+            <h1>📊 Transaction History</h1>
+            <p>View ticket activity timeline - Click on any ticket to expand details</p>
         </div>
 
         <div class="controls">
-    <div class="filter-section">
-        <!-- First row with 5 filters -->
-        <div class="filter-group">
-            <label for="transactionIdFilter">Transaction ID</label>
-            <input type="text" id="transactionIdFilter" placeholder="Filter by transaction ID...">
-        </div>
-        
-        <div class="filter-group">
-            <label for="ticketIdFilter">Ticket ID</label>
-            <input type="text" id="ticketIdFilter" placeholder="Filter by ticket ID...">
-        </div>
-        
-        <div class="filter-group">
-            <label for="actionTypeFilter">Action Type</label>
-            <input type="text" id="actionTypeFilter" placeholder="Filter by action type...">
-        </div>
-        
-        <div class="filter-group">
-            <label for="actionByFilter">Action By</label>
-            <input type="text" id="actionByFilter" placeholder="Filter by user...">
-        </div>
-        
-        <div class="filter-group">
-            <label>Action Date</label>
-            <div class="date-filter-group">
-                <select id="dateFilterType">
-                    <option value="">All dates</option>
-                    <option value="specific">Specific date</option>
-                    <option value="before">Before date</option>
-                    <option value="after">After date</option>
-                </select>
-                <input type="date" id="dateFilterValue" style="display: none;">
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label for="ticketIdFilter">Ticket ID</label>
+                    <input type="text" id="ticketIdFilter" placeholder="Filter by ticket ID...">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="actionTypeFilter">Action Type</label>
+                    <select id="actionTypeFilter">
+                        <option value="">All Actions</option>
+                        <option value="create">Create</option>
+                        <option value="update">Update</option>
+                        <option value="assign">Assign</option>
+                        <option value="status_change">Status Change</option>
+                        <option value="reopen">Reopen</option>
+                        <option value="type_urgency_update">Type/Urgency Update</option>
+                        <option value="message_update">Message Update</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="actionByFilter">Action By</label>
+                    <input type="text" id="actionByFilter" placeholder="Filter by username...">
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="clearAllFilters()">Clear All Filters</button>
+                <a href="#" id="backToMainBtn" class="btn btn-secondary">Back to Main Page</a>
             </div>
         </div>
-        
-        <!-- Second row with just the detail filter -->
-        <div class="filter-group full-width">
-            <label for="detailFilter">Detail</label>
-            <input type="text" id="detailFilter" placeholder="Filter by detail...">
-        </div>
-    </div>
 
-    <div class="action-buttons">
-        <button class="btn btn-primary" onclick="clearAllFilters()">Clear All Filters</button>
-        <a href="/mod/main" class="btn btn-secondary">Back to Main Page</a>
-    </div>
-</div>
-
-        <div class="table-container">
-            <div class="table-wrapper">
-                <table id="transactionTable">
-                    <thead>
-                        <tr>
-                            <th>Transaction ID</th>
-                            <th>Ticket ID</th>
-                            <th>Action Type</th>
-                            <th>Action By (ID)</th>
-                            <th>Action By (Username)</th>
-                            <th>Action Date</th>
-                            <th>Detail</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionTableBody">
-                         Sample data 
-                    </tbody>
-                </table>
-            </div>
+        <div id="ticketsContainer" class="tickets-container">
+            <!-- Ticket cards will be populated here -->
         </div>
     </div>
 
     <script>
-    // Store original table data
-    let originalData = [];
+        let allTransactions = [];
+        let groupedTickets = {};
 
-    document.addEventListener('DOMContentLoaded', async function() {
-        try {
-            const response = await fetch('/mod/api/transactions');
-            if (response.ok) {
-                const transactions = await response.json();
-                loadTransactionTable(transactions);
-            } else {
-                console.error('Failed to fetch transactions');
-            }
-        } catch (error) {
-            console.error('Error fetching transactions:', error);
+        // Detect user role
+        const userRole = detectUserRole();
+
+        function detectUserRole() {
+            const path = window.location.pathname;
+            if (path.includes('/staff/')) return 'staff';
+            if (path.includes('/mod/')) return 'mod';
+            return 'mod';
         }
 
-        // Set up filter event listeners
-        document.getElementById('transactionIdFilter').addEventListener('input', applyFilters);
-        document.getElementById('ticketIdFilter').addEventListener('input', applyFilters);
-        document.getElementById('actionTypeFilter').addEventListener('input', applyFilters);
-        document.getElementById('actionByFilter').addEventListener('input', applyFilters);
-        document.getElementById('detailFilter').addEventListener('input', applyFilters);
-        document.getElementById('dateFilterType').addEventListener('change', handleDateFilterChange);
-        document.getElementById('dateFilterValue').addEventListener('change', applyFilters);
-    });
-
-function loadTransactionTable(transactions) {
-        const tbody = document.getElementById('transactionTableBody');
-        tbody.innerHTML = '';
-        originalData = [];
-
-        transactions.forEach(tx => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="transaction-id">${tx.transaction_id}</td>
-                <td class="ticket-id">${tx.ticket_id}</td>
-                <td><span class="action-type action-${tx.action_type.toLowerCase()}">${tx.action_type}</span></td>
-                <td class="action-by-id">${tx.action_by_id}</td>
-                <td class="action-by-username">${tx.action_by_username || 'Unknown'}</td>
-                <td class="action-date">${tx.action_time}</td>
-                <td class="detail">${tx.detail || ''}</td>
-            `;
-
-            tbody.appendChild(row);
-
-            // Save for filtering - convert numbers to strings for filtering
-            originalData.push({
-                element: row.cloneNode(true),
-                transactionId: String(tx.transaction_id), // Convert to string for consistent filtering
-                ticketId: String(tx.ticket_id), // Convert to string for consistent filtering
-                actionType: tx.action_type,
-                actionById: String(tx.action_by_id), // Store ID as string
-                actionByUsername: tx.action_by_username || 'Unknown', // Store username
-                actionDate: tx.action_time,
-                detail: tx.detail || ''
-            });
-        });
-    }
-
-        
-        // Initialize the page
+        // Set correct back button link
         document.addEventListener('DOMContentLoaded', function() {
-            // Store original table data
-            const rows = document.querySelectorAll('#transactionTableBody tr');
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                originalData.push({
-                    element: row.cloneNode(true),
-                    transactionId: cells[0].textContent.trim(),
-                    ticketId: cells[1].textContent.trim(),
-                    actionType: cells[2].textContent.trim(),
-                    actionBy: cells[3].textContent.trim(),
-                    actionTime: cells[4].textContent.trim(),
-                    detail: cells[5].textContent.trim()
+            const backBtn = document.getElementById('backToMainBtn');
+            if (userRole === 'staff') {
+                backBtn.href = '/staff/staff_main';
+            } else {
+                backBtn.href = '/mod/main';
+            }
+        });
+
+        // Fetch and display data
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const apiEndpoint = userRole === 'staff' ? '/staff/api/transactions' : '/mod/api/transactions';
+                const response = await fetch(apiEndpoint);
+                
+                if (response.ok) {
+                    allTransactions = await response.json();
+                    groupTransactionsByTicket();
+                    renderTicketCards();
+                } else {
+                    console.error('Failed to fetch transactions');
+                }
+            } catch (error) {
+                console.error('Error fetching transactions:', error);
+            }
+
+            // Set up filter listeners
+            document.getElementById('ticketIdFilter').addEventListener('input', applyFilters);
+            document.getElementById('actionTypeFilter').addEventListener('change', applyFilters);
+            document.getElementById('actionByFilter').addEventListener('input', applyFilters);
+        });
+
+        function groupTransactionsByTicket() {
+            groupedTickets = {};
+            
+            allTransactions.forEach(tx => {
+                if (!groupedTickets[tx.ticket_id]) {
+                    groupedTickets[tx.ticket_id] = [];
+                }
+                groupedTickets[tx.ticket_id].push(tx);
+            });
+
+            // Sort transactions within each ticket by time (oldest first)
+            Object.keys(groupedTickets).forEach(ticketId => {
+                groupedTickets[ticketId].sort((a, b) => {
+                    return new Date(a.action_time) - new Date(b.action_time);
                 });
             });
+        }
 
-            // Add event listeners for filters
-            document.getElementById('transactionIdFilter').addEventListener('input', applyFilters);
-            document.getElementById('ticketIdFilter').addEventListener('input', applyFilters);
-            document.getElementById('actionTypeFilter').addEventListener('input', applyFilters);
-            document.getElementById('actionByFilter').addEventListener('input', applyFilters);
-            document.getElementById('detailFilter').addEventListener('input', applyFilters);
-            document.getElementById('dateFilterType').addEventListener('change', handleDateFilterChange);
-            document.getElementById('dateFilterValue').addEventListener('change', applyFilters);
-        });
+        function renderTicketCards() {
+            const container = document.getElementById('ticketsContainer');
+            container.innerHTML = '';
 
-        function handleDateFilterChange() {
-            const dateFilterType = document.getElementById('dateFilterType').value;
-            const dateFilterValue = document.getElementById('dateFilterValue');
-            
-            if (dateFilterType === '') {
-                dateFilterValue.style.display = 'none';
-                dateFilterValue.value = '';
-            } else {
-                dateFilterValue.style.display = 'block';
+            const ticketIds = Object.keys(groupedTickets).sort((a, b) => b - a);
+
+            if (ticketIds.length === 0) {
+                container.innerHTML = '<div class="no-results">No transactions found</div>';
+                return;
             }
-            
-            applyFilters();
+
+            ticketIds.forEach(ticketId => {
+                const transactions = groupedTickets[ticketId];
+                const firstTransaction = transactions[0];
+                const latestTransaction = transactions[transactions.length - 1];
+                
+                // Calculate ticket age
+                const firstDate = new Date(firstTransaction.action_time);
+                const lastDate = new Date(latestTransaction.action_time);
+                const now = new Date();
+                const daysSinceFirst = Math.floor((now - firstDate) / (1000 * 60 * 60 * 24));
+                const daysSinceLast = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+                
+                // Determine age category
+                let ageClass = 'old-ticket';
+                let ageLabel = 'Old';
+                if (daysSinceFirst <= 1) {
+                    ageClass = 'new-ticket';
+                    ageLabel = '🆕 New';
+                } else if (daysSinceFirst <= 7) {
+                    ageClass = 'recent-ticket';
+                    ageLabel = '📅 Recent';
+                } else if (daysSinceFirst <= 30) {
+                    ageLabel = '📆 Active';
+                } else {
+                    ageLabel = '📁 Archive';
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'ticket-card';
+                card.dataset.ticketId = ticketId;
+                
+                card.innerHTML = `
+                    <div class="ticket-header" onclick="toggleTicket('${ticketId}')">
+                        <div class="ticket-header-left">
+                            <div class="ticket-id">Ticket #${ticketId}</div>
+                            <div class="ticket-info">
+                                <span class="info-badge age-indicator ${ageClass}">
+                                    ${ageLabel}
+                                </span>
+                                <span class="info-badge transaction-count">
+                                    ${transactions.length} transaction${transactions.length > 1 ? 's' : ''}
+                                </span>
+                                <span class="info-badge first-activity">
+                                    🕐 Created: ${formatDate(firstTransaction.action_time)}
+                                </span>
+                                <span class="info-badge last-activity">
+                                    ⏱️ Last: ${formatDate(latestTransaction.action_time)} ${daysSinceLast === 0 ? '(Today)' : daysSinceLast === 1 ? '(Yesterday)' : `(${daysSinceLast}d ago)`}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="timeline-container">
+                        <div class="timeline">
+                            ${renderTimeline(transactions)}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${month}/${day}/${year} ${hours}:${minutes}`;
+        }
+
+        function renderTimeline(transactions) {
+            return transactions.map(tx => `
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-header">
+                            <span class="action-type action-${tx.action_type.toLowerCase()}">
+                                ${tx.action_type}
+                            </span>
+                            <span class="timeline-date">${tx.action_time}</span>
+                        </div>
+                        <div class="timeline-body">
+                            <div class="timeline-actor">
+                                👤 ${tx.action_by_username} (ID: ${tx.action_by_id})
+                            </div>
+                            ${tx.detail ? `<div class="timeline-detail">${tx.detail}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleTicket(ticketId) {
+            const card = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+            card.classList.toggle('expanded');
         }
 
         function applyFilters() {
-            const filters = {
-                transactionId: document.getElementById('transactionIdFilter').value.toLowerCase(),
-                ticketId: document.getElementById('ticketIdFilter').value.toLowerCase(),
-                actionType: document.getElementById('actionTypeFilter').value.toLowerCase(),
-                actionBy: document.getElementById('actionByFilter').value.toLowerCase(),
-                detail: document.getElementById('detailFilter').value.toLowerCase(),
-                dateType: document.getElementById('dateFilterType').value,
-                dateValue: document.getElementById('dateFilterValue').value
-            };
+            const ticketIdFilter = document.getElementById('ticketIdFilter').value.toLowerCase();
+            const actionTypeFilter = document.getElementById('actionTypeFilter').value.toLowerCase();
+            const actionByFilter = document.getElementById('actionByFilter').value.toLowerCase();
 
-            const tbody = document.getElementById('transactionTableBody');
-            tbody.innerHTML = '';
-
-            let filteredCount = 0;
-
-            originalData.forEach(item => {
-                let showRow = true;
-
-                // Text filters
-                if (filters.transactionId && !item.transactionId.toLowerCase().includes(filters.transactionId)) {
-                    showRow = false;
+            const filteredTransactions = allTransactions.filter(tx => {
+                if (ticketIdFilter && !tx.ticket_id.toString().includes(ticketIdFilter)) {
+                    return false;
                 }
-                if (filters.ticketId && !item.ticketId.toLowerCase().includes(filters.ticketId)) {
-                    showRow = false;
+                if (actionTypeFilter && tx.action_type.toLowerCase() !== actionTypeFilter) {
+                    return false;
                 }
-                if (filters.actionType && !item.actionType.toLowerCase().includes(filters.actionType)) {
-                    showRow = false;
+                if (actionByFilter && !tx.action_by_username.toLowerCase().includes(actionByFilter)) {
+                    return false;
                 }
-                if (filters.actionBy) {
-                 const filter = filters.actionBy.toLowerCase();
-                 const idMatch = item.actionById.toLowerCase().includes(filter);
-                  const usernameMatch = item.actionByUsername.toLowerCase().includes(filter);
-
-                 // show only if at least one matches
-                  showRow = idMatch || usernameMatch;
-                }
-                if (filters.detail && !item.detail.toLowerCase().includes(filters.detail)) {
-                    showRow = false;
-                }
-
-                // Date filter
-                if (filters.dateType && filters.dateValue) {
-                    const itemDate = new Date(item.actionDate);
-                    const filterDate = new Date(filters.dateValue);
-                    
-                    switch (filters.dateType) {
-                        case 'specific':
-                            if (itemDate.toDateString() !== filterDate.toDateString()) {
-                                showRow = false;
-                            }
-                            break;
-                        case 'before':
-                            if (itemDate >= filterDate) {
-                                showRow = false;
-                            }
-                            break;
-                        case 'after':
-                            if (itemDate <= filterDate) {
-                                showRow = false;
-                            }
-                            break;
-                    }
-                }
-
-                if (showRow) {
-                    tbody.appendChild(item.element.cloneNode(true));
-                    filteredCount++;
-                }
+                return true;
             });
 
-            // Show no results message if no rows match
-            if (filteredCount === 0) {
-                const noResultsRow = document.createElement('tr');
-                noResultsRow.innerHTML = '<td colspan="6" class="no-results">No transactions found matching the current filters.</td>';
-                tbody.appendChild(noResultsRow);
-            }
+            // Regroup filtered transactions
+            groupedTickets = {};
+            filteredTransactions.forEach(tx => {
+                if (!groupedTickets[tx.ticket_id]) {
+                    groupedTickets[tx.ticket_id] = [];
+                }
+                groupedTickets[tx.ticket_id].push(tx);
+            });
+
+            Object.keys(groupedTickets).forEach(ticketId => {
+                groupedTickets[ticketId].sort((a, b) => {
+                    return new Date(a.action_time) - new Date(b.action_time);
+                });
+            });
+
+            renderTicketCards();
         }
 
         function clearAllFilters() {
-        // Clear all filter inputs
-        document.getElementById('transactionIdFilter').value = '';
-        document.getElementById('ticketIdFilter').value = '';
-        document.getElementById('actionTypeFilter').value = '';
-        document.getElementById('actionByFilter').value = '';
-        document.getElementById('detailFilter').value = '';
-        document.getElementById('dateFilterType').value = '';
-        document.getElementById('dateFilterValue').value = '';
-        document.getElementById('dateFilterValue').style.display = 'none';
-
-        // Reset table to show all data
-        const tbody = document.getElementById('transactionTableBody');
-        tbody.innerHTML = '';
-        originalData.forEach(item => {
-            tbody.appendChild(item.element.cloneNode(true));
-        });
-    }
+            document.getElementById('ticketIdFilter').value = '';
+            document.getElementById('actionTypeFilter').value = '';
+            document.getElementById('actionByFilter').value = '';
+            
+            groupTransactionsByTicket();
+            renderTicketCards();
+        }
     </script>
 </body>
 </html>
